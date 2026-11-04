@@ -1,8 +1,7 @@
 import { NetworkDevice, NetworkCable } from '@core/types';
 import { IpMath } from '@core/engine/ip-math';
-import { AclEngine } from '@core/engine/acl-engine';
-import { NatEngine } from '@core/engine/nat-engine';
 import { OspfEngine } from '@core/engine/ospf-engine';
+import { PacketTracer } from '@core/engine/packet-tracer';
 
 export interface LabGradingCheck {
   label: string;
@@ -21,7 +20,7 @@ export interface LabGradingReport {
 
 export class LabGraderService {
   /**
-   * Evaluates lab criteria against current topology state.
+   * Evaluates lab criteria against current topology state strictly using PacketTracer simulations.
    */
   static evaluate(
     devices: NetworkDevice[],
@@ -35,18 +34,47 @@ export class LabGraderService {
     // Helper: find device by name
     const findDev = (name: string) => devices.find((d) => d.name === name);
 
+    // Helper: run simulation between two named devices
+    const runSim = (srcName: string, dstName: string, protocol: 'icmp' | 'tcp' = 'icmp', dstPort?: number) => {
+      const src = findDev(srcName);
+      const dst = findDev(dstName);
+      if (!src || !dst) {
+        return {
+          success: false,
+          reason: `ไม่พบอุปกรณ์ ${!src ? srcName : dstName} บนผังเครือข่าย`,
+          hops: []
+        };
+      }
+      return PacketTracer.trace(src, dst, devices, cables, protocol, dstPort);
+    };
+
     // 1. Custom Rules Evaluation
     if (customConfig?.rules && customConfig.rules.length > 0) {
       title = customConfig.title || 'Custom Lab Assessment';
       for (const rule of customConfig.rules) {
         if (rule.type === 'ping_pass') {
-          const d1 = findDev(rule.src);
-          const d2 = rule.dst ? findDev(rule.dst) : null;
-          const ok = !!(d1 && d2 && Object.values(d1.ports).some(p => p.up && p.ip) && Object.values(d2.ports).some(p => p.up && p.ip));
+          const sim = runSim(rule.src, rule.dst || '', 'icmp');
           checks.push({
             label: `Ping (ICMP) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
-            passed: ok,
-            reason: ok ? 'เชื่อมต่อ ICMP สำเร็จ' : `ปลายทาง ${rule.dst} ไม่สามารถเข้าถึงได้`,
+            passed: sim.success,
+            reason: sim.reason,
+            isCustom: true
+          });
+        } else if (rule.type === 'http_pass') {
+          const sim = runSim(rule.src, rule.dst || '', 'tcp', 80);
+          checks.push({
+            label: `เปิดเว็บ HTTP (Port 80) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
+            passed: sim.success,
+            reason: sim.reason,
+            isCustom: true
+          });
+        } else if (rule.type === 'ping_block') {
+          const sim = runSim(rule.src, rule.dst || '', 'icmp');
+          const blocked = !sim.success && !!sim.aclBlocked;
+          checks.push({
+            label: `Firewall ACL บล็อก Ping จาก ${rule.src} ➔ ${rule.dst}`,
+            passed: blocked,
+            reason: blocked ? sim.reason : 'Packet ยังไม่ถูกบล็อกด้วยกฎ ACL',
             isCustom: true
           });
         } else if (rule.type === 'nat_active') {
@@ -63,17 +91,15 @@ export class LabGraderService {
     } else if (labId === 'lab1' || labId === 'lan') {
       title = 'Lab 01: Basic Switch Configuration & Device Hardening';
       const sw1 = devices.find((d) => d.type === 'switch');
-      const pc1 = findDev('PC1');
-      const srv = findDev('File-SRV');
-      const hasHardening = !!(sw1 && (sw1.name !== 'Switch0' || (sw1 as any).enableSecret || (sw1 as any).passwordEncryption));
+      const pingSim = runSim('PC1', 'File-SRV', 'icmp');
+      const hasHardening = !!(sw1 && (sw1.name !== 'Switch0' && ((sw1 as any).enableSecret || (sw1 as any).passwordEncryption)));
       const portsUp = !!(sw1 && sw1.ports['Fa0/1']?.up && sw1.ports['Fa0/2']?.up);
-      const pingOk = !!(pc1 && srv && pc1.ports['Eth0']?.ip && srv.ports['Eth0']?.ip && IpMath.isSameSubnet(pc1.ports['Eth0'].ip, srv.ports['Eth0'].ip, '255.255.255.0'));
 
       checks.push(
         {
-          label: 'ตั้งค่าพื้นฐาน Switch (Hostname / Enable Secret / SVI Vlan1)',
+          label: 'ตั้งค่าพื้นฐาน Switch (Hostname และ Enable Secret)',
           passed: hasHardening,
-          reason: hasHardening ? 'ตั้งค่าการรักษาความปลอดภัยเบื้องต้นเรียบร้อย' : 'กำหนด hostname หรือ enable secret'
+          reason: hasHardening ? 'ตั้งค่าการรักษาความปลอดภัยเบื้องต้นเรียบร้อย' : 'ต้องเปลี่ยนชื่อ hostname และตั้งค่า enable secret'
         },
         {
           label: 'พอร์ตเชื่อมต่อบน Switch สถานะ UP พร้อมใช้งาน',
@@ -82,8 +108,8 @@ export class LabGraderService {
         },
         {
           label: 'ทดสอบส่ง Ping ในวงแลนเดียวกันจาก PC1 ➔ File-SRV สำเร็จ',
-          passed: pingOk,
-          reason: pingOk ? 'Ping ในวงแลน 192.168.1.0/24 สำเร็จ' : 'ตรวจสอบ IP และ Subnet Mask'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab2' || labId === 'subnets') {
@@ -91,6 +117,7 @@ export class LabGraderService {
       const r1 = devices.find((d) => d.type === 'router');
       const pc1 = findDev('PC1');
       const srv = findDev('Web-SRV');
+      const pingSim = runSim('PC1', 'Web-SRV', 'icmp');
       const rPortsUp = !!(r1 && r1.ports['Gig0/0']?.ip && r1.ports['Gig0/0']?.up && r1.ports['Gig0/1']?.ip && r1.ports['Gig0/1']?.up);
       const gwOk = !!(pc1?.gateway === '192.168.10.1' && srv?.gateway === '192.168.20.1');
 
@@ -98,17 +125,17 @@ export class LabGraderService {
         {
           label: 'ตั้งค่า IP และเปิดพอร์ต Gig0/0, Gig0/1 บน R1-Core (no shutdown)',
           passed: rPortsUp,
-          reason: rPortsUp ? 'Gig0/0 และ Gig0/1 มี IP และสถานะ UP' : 'ตรวจสอบ ip address และ no shutdown'
+          reason: rPortsUp ? 'Gig0/0 และ Gig0/1 มี IP และสถานะ UP' : 'ตรวจสอบ ip address และ no shutdown บน Gig0/0, Gig0/1'
         },
         {
           label: 'ตั้งค่า Default Gateway บน PC1 (192.168.10.1) และ Web-SRV (192.168.20.1)',
           passed: gwOk,
-          reason: gwOk ? 'Default Gateway ถูกต้อง' : 'ตรวจสอบค่า Default Gateway ของโฮสต์'
+          reason: gwOk ? 'Default Gateway ทั้งสองฝั่งถูกต้อง' : 'ตรวจสอบค่า Default Gateway ของ PC1 และ Web-SRV'
         },
         {
           label: 'ส่ง Ping ข้ามวงแลนจาก PC1 ➔ Web-SRV สำเร็จ',
-          passed: rPortsUp && gwOk,
-          reason: rPortsUp && gwOk ? 'เราเตอร์ส่งต่อแพ็กเก็ตข้ามวงได้สำเร็จ' : 'เราเตอร์หรือโฮสต์ยังตั้งค่าไม่สมบูรณ์'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab3') {
@@ -116,6 +143,7 @@ export class LabGraderService {
       const r1 = devices.find((d) => d.type === 'router');
       const pc1 = findDev('Sales-PC');
       const srv = findDev('IT-SRV');
+      const pingSim = runSim('Sales-PC', 'IT-SRV', 'icmp');
       const maskOk = r1?.ports['Gig0/0']?.mask === '255.255.255.192' && r1?.ports['Gig0/1']?.mask === '255.255.255.192';
       const ipsOk = !!(pc1 && srv && IpMath.isSameSubnet(pc1.ports['Eth0']?.ip, '192.168.10.1', '255.255.255.192') && IpMath.isSameSubnet(srv.ports['Eth0']?.ip, '192.168.10.65', '255.255.255.192'));
 
@@ -128,18 +156,19 @@ export class LabGraderService {
         {
           label: 'จัดสรร IP ใน Subnet แรก (.1–.62) ให้ Sales-PC และ Subnet ที่สอง (.65–.126) ให้ IT-SRV',
           passed: ipsOk,
-          reason: ipsOk ? 'จัดสรรช่วง IP ตามการคำนวณ VLSM ถูกต้อง' : 'ตรวจสอบ IP ของทั้งสองโฮสต์'
+          reason: ipsOk ? 'จัดสรรช่วง IP ตามการคำนวณ VLSM ถูกต้อง' : 'ตรวจสอบ IP ของทั้งสองโฮสต์ให้อยู่ใน Subnet /26'
         },
         {
           label: 'ส่ง Ping ข้าม VLSM Subnet ระหว่าง Sales-PC ⟷ IT-SRV สำเร็จ',
-          passed: !!maskOk && ipsOk,
-          reason: maskOk && ipsOk ? 'Ping ข้าม Subnet /26 สำเร็จ' : 'ตรวจสอบเราเตอร์และการกำหนดเส้นทาง'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab4' || labId === 'static-route') {
       title = 'Lab 04: IPv4 Static & Default Routing';
       const r1 = findDev('R1-HQ') as any;
       const r2 = findDev('R2-Branch') as any;
+      const pingSim = runSim('HQ-PC', 'Branch-SRV', 'icmp');
       const r1Route = !!(r1 && r1.routes && r1.routes.length > 0);
       const r2Route = !!(r2 && r2.routes && r2.routes.length > 0);
 
@@ -147,24 +176,29 @@ export class LabGraderService {
         {
           label: 'กำหนด Static Route บน R1-HQ ไปยัง 192.168.30.0/24',
           passed: r1Route,
-          reason: r1Route ? 'พบ Static Route บน R1-HQ แล้ว' : 'ใช้คำสั่ง ip route 192.168.30.0 255.255.255.0 10.0.0.2'
+          reason: r1Route ? 'พบ Static Route บน R1-HQ แล้ว' : 'ใช้คำสั่ง ip route 192.168.30.0 255.255.255.0 10.0.0.2 บน R1-HQ'
         },
         {
           label: 'กำหนด Static Route ขากลับบน R2-Branch ไปยัง 192.168.10.0/24',
           passed: r2Route,
-          reason: r2Route ? 'พบ Static Route ขากลับบน R2-Branch แล้ว' : 'ใช้คำสั่ง ip route 192.168.10.0 255.255.255.0 10.0.0.1'
+          reason: r2Route ? 'พบ Static Route ขากลับบน R2-Branch แล้ว' : 'ใช้คำสั่ง ip route 192.168.10.0 255.255.255.0 10.0.0.1 บน R2-Branch'
         },
         {
           label: 'ส่ง Ping ข้ามเราเตอร์จาก HQ-PC ➔ Branch-SRV สำเร็จทั้งขาไปและขากลับ',
-          passed: r1Route && r2Route,
-          reason: r1Route && r2Route ? 'เส้นทางครบทั้งขาไปและขากลับ' : 'ตรวจสอบ Static Route บนเราเตอร์ทั้งสองตัว'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab5') {
       title = 'Lab 05: VLANs, Access Ports & 802.1Q Trunking';
       const sw1 = findDev('SW1');
       const sw2 = findDev('SW2');
+      const sameVlanSim = runSim('HR-PC1', 'HR-PC2', 'icmp');
+      const crossVlanSim = runSim('HR-PC1', 'Sales-PC1', 'icmp');
       const trunkOk = sw1?.ports['Fa0/1']?.mode === 'trunk' && sw2?.ports['Fa0/1']?.mode === 'trunk';
+
+      // Real simulation check for VLAN Isolation: cross-vlan MUST fail, same-vlan MUST succeed!
+      const vlanIsolationWorks = !crossVlanSim.success && crossVlanSim.dropStage === 'l2_vlan';
 
       checks.push(
         {
@@ -174,19 +208,20 @@ export class LabGraderService {
         },
         {
           label: 'ส่ง Ping ข้าม Switch ใน VLAN 10 เดียวกัน (HR-PC1 ➔ HR-PC2) สำเร็จ',
-          passed: !!trunkOk,
-          reason: trunkOk ? 'พอร์ต Trunk ส่งเฟรมข้ามสวิตช์ใน VLAN เดียวกันสำเร็จ' : 'ต้องเปิด Trunk Link ระหว่างสวิตช์'
+          passed: sameVlanSim.success,
+          reason: sameVlanSim.reason
         },
         {
           label: 'VLAN Isolation กั้นการสื่อสารระหว่าง VLAN 10 (HR-PC1) กับ VLAN 20 (Sales-PC1)',
-          passed: true,
-          reason: 'VLAN Isolation แยก Broadcast Domain สำเร็จ'
+          passed: vlanIsolationWorks,
+          reason: vlanIsolationWorks ? 'VLAN Isolation กั้นทราฟฟิกข้าม VLAN สำเร็จ (แยก Broadcast Domain)' : 'ตรวจพบว่าแพ็กเก็ตข้าม VLAN ได้โดยไม่มีเราเตอร์ หรือการทดสอบล้มเหลว'
         }
       );
     } else if (labId === 'lab6' || labId === 'roas-vlan') {
       title = 'Lab 06: Inter-VLAN Routing (Router-on-a-Stick 802.1Q)';
       const sw = devices.find((d) => d.type === 'switch');
       const r1 = devices.find((d) => d.type === 'router');
+      const pingSim = runSim('HR-PC (VLAN10)', 'DB-SRV (VLAN20)', 'icmp');
       const trunkOk = sw?.ports['Fa0/1']?.mode === 'trunk';
       const subIfOk = !!(r1 && r1.ports['Gig0/0.10']?.ip && r1.ports['Gig0/0.20']?.ip);
 
@@ -203,8 +238,8 @@ export class LabGraderService {
         },
         {
           label: 'Ping ข้าม VLAN ระหว่าง HR-PC (VLAN10) ⟷ DB-SRV (VLAN20) สำเร็จ',
-          passed: !!trunkOk && subIfOk,
-          reason: trunkOk && subIfOk ? 'Router-on-a-Stick ส่งต่อแพ็กเก็ตข้าม VLAN สำเร็จ' : 'ต้องตั้งค่า Trunk และ Sub-interfaces'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab7') {
@@ -212,6 +247,7 @@ export class LabGraderService {
       const r1 = findDev('R1-DHCP') as any;
       const pc1 = findDev('Client-PC1');
       const pc2 = findDev('Client-PC2');
+      const pingSim = runSim('Client-PC1', 'R1-DHCP', 'icmp');
       const hasPool = !!(r1 && r1.dhcpPools && r1.dhcpPools.length > 0 && r1.dhcpExcluded && r1.dhcpExcluded.length > 0);
       const hasLeases = !!(pc1?.ports['Eth0']?.ip && pc2?.ports['Eth0']?.ip && pc1.ports['Eth0'].ip !== pc2.ports['Eth0'].ip);
 
@@ -219,7 +255,7 @@ export class LabGraderService {
         {
           label: 'ตั้งค่า ip dhcp excluded-address และ ip dhcp pool บน R1-DHCP',
           passed: hasPool,
-          reason: hasPool ? `ตั้งค่า DHCP Pool "${r1.dhcpPools[0].name}" เรียบร้อย` : 'กำหนด ip dhcp pool และ excluded-address'
+          reason: hasPool ? `ตั้งค่า DHCP Pool "${r1.dhcpPools[0].name}" เรียบร้อย` : 'กำหนด ip dhcp pool และ excluded-address บน R1-DHCP'
         },
         {
           label: 'Client-PC1 และ Client-PC2 ขอรับ IP ผ่านกระบวนการ DORA สำเร็จ (IP ไม่ซ้ำกัน)',
@@ -228,14 +264,15 @@ export class LabGraderService {
         },
         {
           label: 'ส่ง Ping จาก Client-PC1 ไปยัง Default Gateway (R1-DHCP) สำเร็จ',
-          passed: hasPool && hasLeases,
-          reason: hasPool && hasLeases ? 'Client สื่อสารกับ Default Gateway สำเร็จ' : 'ตรวจสอบ IP และ Gateway'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab8' || labId === 'ospf-core') {
       title = 'Lab 08: Single-Area OSPFv2 Dynamic Routing';
       const r1 = findDev('R1-Edge') as any;
       const r2 = findDev('R2-Core') as any;
+      const pingSim = runSim('Edge-PC', 'Cloud-SRV', 'icmp');
       const ospfNetOk = !!(r1?.ospf?.networks?.length > 0 && r2?.ospf?.networks?.length > 0);
       const r1Neighbors = r1 ? OspfEngine.getOspfNeighbors(r1, devices, cables) : [];
       const adjOk = r1Neighbors.length > 0;
@@ -253,20 +290,16 @@ export class LabGraderService {
         },
         {
           label: 'Ping ข้ามเราเตอร์ OSPF จาก Edge-PC ➔ Cloud-SRV สำเร็จ',
-          passed: ospfNetOk && adjOk,
-          reason: ospfNetOk && adjOk ? 'OSPF สร้างตารางเราติ้งและส่งต่อแพ็กเก็ตสำเร็จ' : 'ตรวจสอบ OSPF Neighbor และการเชื่อมต่อ'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab9') {
       title = 'Lab 09: Standard & Extended IPv4 ACL Firewall (Implicit Deny)';
       const r1 = findDev('R1-FW') as any;
-      const hasBoundAcl = !!(r1 && r1.acls && r1.acls.length > 0 && Object.values(r1.ports).some((p: any) => p.aclIn || p.aclOut));
-      const extAcl = r1?.acls?.find((a: any) => a.id === 100 || a.id === '100');
-      const icmpMatch = extAcl ? AclEngine.evaluatePacket(extAcl, '192.168.10.10', '192.168.20.10', 'icmp') : null;
-      const tcpMatch = extAcl ? AclEngine.evaluatePacket(extAcl, '192.168.10.10', '192.168.20.10', 'tcp', 80) : null;
-
-      const icmpBlocked = icmpMatch ? icmpMatch.action === 'deny' : false;
-      const tcpPermitted = tcpMatch ? tcpMatch.action === 'permit' : false;
+      const pingSim = runSim('Staff-PC', 'Web-SRV', 'icmp');
+      const httpSim = runSim('Staff-PC', 'Web-SRV', 'tcp', 80);
+      const hasBoundAcl = !!(r1 && r1.acls && r1.acls.length > 0 && Object.values(r1.ports).some((p: any) => p.aclIn || p.aclOut || (p as any).aclGroup));
 
       checks.push(
         {
@@ -276,36 +309,39 @@ export class LabGraderService {
         },
         {
           label: 'กฎ ACL บล็อก ICMP Ping จาก Staff-PC ➔ Web-SRV',
-          passed: icmpBlocked,
-          reason: icmpBlocked ? 'ICMP Ping ถูกบล็อกโดยกฎ ACL' : 'ต้องมีกฎ deny icmp หรือใช้ Implicit Deny'
+          passed: !pingSim.success && !!pingSim.aclBlocked,
+          reason: pingSim.aclBlocked ? pingSim.reason : 'ICMP Ping ต้องถูกบล็อกโดยกฎ ACL'
         },
         {
           label: 'กฎ ACL อนุญาตให้เปิดเว็บ HTTP (TCP Port 80) จาก Staff-PC ➔ Web-SRV สำเร็จ',
-          passed: tcpPermitted,
-          reason: tcpPermitted ? 'HTTP Port 80 ได้รับอนุญาตผ่าน ACL' : 'ต้องมีกฎ permit tcp ... eq 80'
+          passed: httpSim.success,
+          reason: httpSim.reason
         }
       );
     } else if (labId === 'lab10' || labId === 'acl-nat') {
       title = 'Lab 10: NAT/PAT Overload, Firewall ACL & ISP Cloud';
       const r1 = findDev('R1-Firewall') as any;
+      const pingSim = runSim('Corp-PC', 'ISP-Cloud', 'icmp');
+      const httpSim = runSim('Corp-PC', 'ISP-Cloud', 'tcp', 80);
       const hasNat = !!(r1 && r1.natEnabled);
-      const sess = hasNat ? NatEngine.processOutboundTranslation(r1, 'Gig0/0', 'Gig0/1', '192.168.10.10', 50000, 'tcp') : null;
+      const pingBlockedByAcl = !pingSim.success && !!pingSim.aclBlocked;
+      const httpAllowedAndNatted = !!httpSim.success && !!httpSim.natTranslated;
 
       checks.push(
         {
           label: 'เปิดใช้งาน NAT Overload (Inside/Outside) บน R1-Firewall',
-          passed: hasNat && !!sess?.translated,
-          reason: hasNat ? 'แปลง Private IP เป็น Inside Global สำเร็จ' : 'เปิดใช้งาน ip nat inside source list ... overload'
+          passed: hasNat && httpAllowedAndNatted,
+          reason: httpAllowedAndNatted ? 'แปลง Private IP เป็น Inside Global (PAT Overload) สำเร็จ' : 'เปิดใช้งาน ip nat inside source list ... overload'
         },
         {
           label: 'ตั้งกฎ ACL บล็อก ICMP Ping แต่เปิดให้เข้าเว็บ HTTP Port 80 ได้',
-          passed: hasNat,
-          reason: hasNat ? 'ACL ควบคุมการส่งผ่านทราฟฟิกถูกต้อง' : 'ตรวจสอบกฎ ACL'
+          passed: pingBlockedByAcl && httpSim.success,
+          reason: pingBlockedByAcl ? pingSim.reason : 'ICMP Ping ต้องถูกบล็อกด้วยกฎ ACL และ HTTP ต้องผ่านได้'
         },
         {
           label: 'เปิดเข้าเว็บ HTTP (Port 80) จาก Corp-PC ไปยัง ISP-Cloud สำเร็จ',
-          passed: hasNat && !!sess?.translated,
-          reason: hasNat && !!sess?.translated ? 'PAT แปลงพอร์ตและเชื่อมต่อเว็บสำเร็จ' : 'ตรวจสอบการตั้งค่า NAT และ ACL'
+          passed: httpSim.success,
+          reason: httpSim.reason
         }
       );
     } else if (labId === 'lab11' || labId === 'troubleshoot') {
@@ -313,6 +349,7 @@ export class LabGraderService {
       const r1 = findDev('R1-Gateway');
       const pc1 = findDev('PC1');
       const srv = findDev('Payroll-SRV');
+      const pingSim = runSim('PC1', 'Payroll-SRV', 'icmp');
       const g01Up = !!(r1 && r1.ports['Gig0/1']?.up);
       const pcGwOk = !!(pc1 && pc1.gateway === '192.168.10.1');
       const srvIpOk = !!(srv && srv.ports['Eth0']?.ip === '192.168.20.100');
@@ -335,8 +372,8 @@ export class LabGraderService {
         },
         {
           label: 'ส่ง Ping จาก PC1 ไปยัง Payroll-SRV สำเร็จ',
-          passed: g01Up && pcGwOk && srvIpOk,
-          reason: g01Up && pcGwOk && srvIpOk ? 'ซ่อมแซมระบบครบ 3 จุด ทราฟฟิกผ่านฉลุย' : 'ยังมีจุดที่ตั้งค่าไม่ถูกต้อง'
+          passed: pingSim.success,
+          reason: pingSim.reason
         }
       );
     } else if (labId === 'lab12') {
@@ -344,6 +381,7 @@ export class LabGraderService {
       const sw = findDev('SW-Core');
       const r1 = findDev('R1-HQ') as any;
       const r2 = findDev('R2-Edge') as any;
+      const httpSim = runSim('HQ-PC1', 'ISP-Server', 'tcp', 80);
       const swTrunk = !!(sw && sw.ports['Fa0/1']?.mode === 'trunk');
       const r1Neighbors = r1 ? OspfEngine.getOspfNeighbors(r1, devices, cables) : [];
       const ospfOk = r1Neighbors.length > 0;
@@ -362,15 +400,21 @@ export class LabGraderService {
         },
         {
           label: 'WAN & NAT: ส่ง HTTP ข้าม VLAN ➔ OSPF ➔ PAT Overload ไปยัง ISP-Server สำเร็จ',
-          passed: swTrunk && ospfOk && natOk,
-          reason: swTrunk && ospfOk && natOk ? 'ระบบเชื่อมต่อครบวงจรทั้งองค์กร' : 'ตรวจสอบการตั้งค่าทั้งหมด'
+          passed: httpSim.success && !!httpSim.natTranslated && natOk,
+          reason: httpSim.reason
         }
       );
     } else {
+      const pingSim = devices.length >= 2 ? runSim(devices[0].name, devices[devices.length - 1].name, 'icmp') : { success: false, reason: 'มีอุปกรณ์ไม่เพียงพอ' };
       checks.push({
         label: 'มีอุปกรณ์และสายเชื่อมต่อครบถ้วน',
         passed: devices.length >= 2 && cables.length >= 1,
         reason: devices.length >= 2 && cables.length >= 1 ? 'อุปกรณ์และสายพร้อมใช้งาน' : 'กรุณาวางอุปกรณ์และเชื่อมสาย'
+      });
+      checks.push({
+        label: 'การเชื่อมต่อระหว่างโฮสต์สำเร็จ',
+        passed: pingSim.success,
+        reason: pingSim.reason
       });
     }
 

@@ -5,8 +5,9 @@ import { AppHeader } from './layouts/AppHeader';
 import { SubnetCalculatorModal } from './components/modals/SubnetCalculatorModal';
 import { CiscoTerminalModal } from './components/terminal/CiscoTerminalModal';
 import { NetAcadCoachModal } from './components/modals/NetAcadCoachModal';
+import { DeviceConfigModal } from './components/modals/DeviceConfigModal';
 import { TopologyViewport } from './components/canvas/TopologyViewport';
-import { Server, Router, Laptop, Cloud, Terminal } from 'lucide-react';
+import { Server, Router, Laptop, Cloud, Terminal, Settings } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { devices, selectedDeviceId, addDevice } = useTopologyStore();
@@ -84,6 +85,13 @@ export const App: React.FC = () => {
               <div className="h-4 w-px bg-slate-700"></div>
               <div className="flex items-center gap-1.5">
                 <button
+                  onClick={() => openModal('config', selectedDevice.id)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-semibold text-xs flex items-center gap-1.5 border border-slate-700 shadow"
+                >
+                  <Settings size={14} className="text-cyan-400" />
+                  <span>ตั้งค่าอุปกรณ์</span>
+                </button>
+                <button
                   onClick={() => openModal('cli', selectedDevice.id)}
                   className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow"
                 >
@@ -97,6 +105,13 @@ export const App: React.FC = () => {
       </div>
 
       {/* Modals Container */}
+      {activeModal === 'config' && selectedDevice && (
+        <DeviceConfigModal 
+          device={selectedDevice} 
+          onClose={closeModal} 
+        />
+      )}
+
       {activeModal === 'subnet_calc' && (
         <SubnetCalculatorModal onClose={closeModal} />
       )}

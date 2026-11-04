@@ -6,13 +6,14 @@ import { NodeRenderer } from './NodeRenderer';
 import { NetworkDevice } from '@core/types';
 import { 
   MousePointer, Cable, Trash2, ZoomIn, ZoomOut, RotateCcw, 
-  Send, Globe
+  Send, Globe, CheckCircle2, AlertTriangle, X
 } from 'lucide-react';
 
 export const TopologyViewport: React.FC = () => {
   const { devices, cables, selectDevice, addCable } = useTopologyStore();
   const { 
-    currentTool, setTool, cableSource, setCableSource 
+    currentTool, setTool, cableSource, setCableSource,
+    packetSource, setPacketSource, lastSimulationResult, setLastSimulationResult
   } = useSessionStore();
 
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -153,6 +154,75 @@ export const TopologyViewport: React.FC = () => {
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-30">
           <div className="font-mono text-cyan-400 font-bold text-base">NetSim Touch v5.2 Modernized Canvas</div>
           <p className="text-xs text-slate-400 mt-1">เลือกวาง Router, Switch หรือ PC จากแถบซ้ายมือเพื่อเริ่มต้นออกแบบเครือข่าย</p>
+        </div>
+      )}
+
+      {/* Packet Source Active Indicator Banner */}
+      {packetSource && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/20 border border-amber-500/50 text-amber-300 px-4 py-2 rounded-2xl shadow-xl flex items-center gap-2 backdrop-blur z-30 animate-in fade-in slide-in-from-top-2 duration-150">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+          <span className="text-xs font-semibold">
+            กำลังเลือกอุปกรณ์ปลายทางเพื่อส่ง {packetSource.protocol.toUpperCase()}... (แตะอุปกรณ์ปลายทาง)
+          </span>
+          <button
+            onClick={() => setPacketSource(null)}
+            className="w-5 h-5 rounded-md hover:bg-amber-500/30 text-amber-300 flex items-center justify-center text-xs ml-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* PDU Simulation Result Drawer */}
+      {lastSimulationResult && (
+        <div className="absolute bottom-16 left-4 max-w-md w-full bg-slate-900/95 border border-slate-700 rounded-3xl p-4 shadow-2xl backdrop-blur z-30 animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              {lastSimulationResult.success ? (
+                <CheckCircle2 size={18} className="text-emerald-400" />
+              ) : (
+                <AlertTriangle size={18} className="text-rose-400" />
+              )}
+              <span className={`font-bold text-xs ${lastSimulationResult.success ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {lastSimulationResult.success ? 'Packet ส่งถึงปลายทางสำเร็จ' : 'Packet ถูก Drop / ล้มเหลว'}
+              </span>
+            </div>
+            <button
+              onClick={() => setLastSimulationResult(null)}
+              className="w-6 h-6 rounded-lg text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center text-xs"
+            >
+              <X size={14} />
+            </button>
+          </div>
+
+          <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
+            {lastSimulationResult.reason}
+          </p>
+
+          {/* Hop-by-Hop Trace */}
+          {lastSimulationResult.hops.length > 0 && (
+            <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider">
+                Hop-by-Hop Simulation Trace:
+              </div>
+              {lastSimulationResult.hops.map((hop, idx) => (
+                <div
+                  key={idx}
+                  className="p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px] font-mono space-y-0.5"
+                >
+                  <div className="flex items-center justify-between text-slate-300 font-bold">
+                    <span>{idx + 1}. {hop.device}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300">
+                      {hop.layer} • {hop.action.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-slate-400 text-[10px] leading-relaxed">
+                    {hop.details}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

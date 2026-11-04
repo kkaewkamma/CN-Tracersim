@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { NetworkDevice, DeviceType } from '@core/types';
 import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
+import { PacketTracer } from '@core/engine/packet-tracer';
 import { Router, Server, Laptop, Cloud, Terminal } from 'lucide-react';
 
 interface NodeRendererProps {
@@ -11,11 +12,15 @@ interface NodeRendererProps {
 }
 
 export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpenPortSelect }) => {
-  const { selectedDeviceId, selectDevice, updateDevicePosition, removeDevice } = useTopologyStore();
-  const { currentTool, cableSource, openModal } = useSessionStore();
+  const { devices, cables, selectedDeviceId, selectDevice, updateDevicePosition, removeDevice } = useTopologyStore();
+  const { 
+    currentTool, setTool, cableSource, packetSource, setPacketSource, 
+    setLastSimulationResult, openModal 
+  } = useSessionStore();
 
   const isSelected = selectedDeviceId === device.id;
   const isCableSrc = cableSource?.deviceId === device.id;
+  const isPduSrc = packetSource?.deviceId === device.id;
   const isDeleteMode = currentTool === 'delete';
 
   const [isDragging, setIsDragging] = useState(false);
@@ -47,6 +52,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
   const getBorderColor = () => {
     if (isDeleteMode) return 'border-rose-500/80 hover:border-rose-400';
     if (isCableSrc) return 'border-amber-400 shadow-amber-500/30 ring-2 ring-amber-400 animate-pulse';
+    if (isPduSrc) return 'border-emerald-400 shadow-emerald-500/40 ring-2 ring-emerald-400 animate-pulse';
     if (isSelected) return 'border-cyan-400 shadow-cyan-500/40 ring-2 ring-cyan-400';
     return 'border-slate-700 hover:border-slate-500';
   };
@@ -65,6 +71,33 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
     if (currentTool === 'cable') {
       if (onOpenPortSelect) {
         onOpenPortSelect(device);
+      }
+      return;
+    }
+
+    if (currentTool === 'packet' || currentTool === 'http') {
+      const proto = currentTool === 'packet' ? 'icmp' : 'tcp';
+      if (!packetSource) {
+        setPacketSource({ deviceId: device.id, protocol: proto });
+      } else {
+        if (packetSource.deviceId === device.id) {
+          setPacketSource(null);
+          return;
+        }
+        const srcDev = devices.find(d => d.id === packetSource.deviceId);
+        if (srcDev) {
+          const res = PacketTracer.trace(
+            srcDev, 
+            device, 
+            devices, 
+            cables, 
+            packetSource.protocol, 
+            packetSource.protocol === 'tcp' ? 80 : undefined
+          );
+          setLastSimulationResult(res);
+        }
+        setPacketSource(null);
+        setTool('select');
       }
       return;
     }
@@ -155,4 +188,3 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
     </div>
   );
 };
-

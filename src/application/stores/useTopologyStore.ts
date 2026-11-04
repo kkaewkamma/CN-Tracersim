@@ -12,6 +12,8 @@ interface TopologyState {
   // Actions
   selectDevice: (id: string | null) => void;
   updateDevicePosition: (id: string, x: number, y: number) => void;
+  updateDevice: (id: string, updater: (dev: NetworkDevice) => NetworkDevice) => void;
+  updateInterface: (devId: string, portName: string, updater: (port: any) => any) => void;
   addDevice: (type: DeviceType, x: number, y: number, name?: string) => NetworkDevice;
   removeDevice: (id: string) => void;
   addCable: (from: string, fromPort: string, to: string, toPort: string) => NetworkCable;
@@ -31,6 +33,24 @@ export const useTopologyStore = create<TopologyState>((set, get) => ({
 
   updateDevicePosition: (id, x, y) => set((state) => ({
     devices: state.devices.map(d => d.id === id ? { ...d, x: Math.round(x), y: Math.round(y) } : d)
+  })),
+
+  updateDevice: (id, updater) => set((state) => ({
+    devices: state.devices.map(d => d.id === id ? updater(d) : d)
+  })),
+
+  updateInterface: (devId, portName, updater) => set((state) => ({
+    devices: state.devices.map(d => {
+      if (d.id !== devId) return d;
+      const currentPort = d.ports[portName] || { name: portName };
+      return {
+        ...d,
+        ports: {
+          ...d.ports,
+          [portName]: updater(currentPort)
+        }
+      };
+    })
   })),
 
   addDevice: (type, x, y, customName) => {

@@ -12,31 +12,7 @@
     <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg">
     <title>NetSim Touch v4.0 Ultimate - iPad Packet Tracer & Cisco IOS CLI</title>
     
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'Sarabun', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        cisco: {
-                            blue: '#049fd9',
-                            dark: '#0b111a',
-                            panel: '#152030',
-                            border: '#25364d'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Offline Local Styling -->
     <link rel="stylesheet" href="./legacy/css/style.css">
 </head>
 <body class="text-slate-100 font-sans h-screen w-screen flex flex-col select-none overflow-hidden bg-cisco-dark">
@@ -731,19 +707,23 @@
         </div>
     </div>
 
-    <!-- LEGACY APPLICATION SCRIPTS (PRESERVED) -->
-    <script src="./legacy/js/network-engine.js"></script>
-    <script src="./legacy/js/cisco-cli.js"></script>
-    <script src="./legacy/js/academy-tutor.js"></script>
-    <script src="./legacy/js/modals.js"></script>
-    <script src="./legacy/js/canvas-ui.js"></script>
-    <script src="./legacy/js/app.js"></script>
+    <!-- LEGACY APPLICATION SCRIPTS (CONDITIONAL RUNNING FOR ?legacy=true) -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => {
-                    console.log('SW registration skipped:', err);
-                });
+        const isLegacyMode = new URLSearchParams(window.location.search).get('legacy') === 'true';
+        if (isLegacyMode) {
+            const legacyScripts = [
+                './legacy/js/network-engine.js',
+                './legacy/js/cisco-cli.js',
+                './legacy/js/academy-tutor.js',
+                './legacy/js/modals.js',
+                './legacy/js/canvas-ui.js',
+                './legacy/js/app.js'
+            ];
+            legacyScripts.forEach(src => {
+                const s = document.createElement('script');
+                s.src = src;
+                s.defer = true;
+                document.body.appendChild(s);
             });
         }
     </script>

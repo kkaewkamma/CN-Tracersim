@@ -97,6 +97,11 @@ export const IpMath = {
     return this.getNetworkAddress(ip1, mask) === this.getNetworkAddress(ip2, mask);
   },
 
+  isIpInSubnet(ip: string, network: string, mask: string): boolean {
+    if (!this.isValidIPv4(ip) || !this.isValidIPv4(network) || !this.isValidMask(mask)) return false;
+    return this.getNetworkAddress(ip, mask) === this.getNetworkAddress(network, mask);
+  },
+
   calculateSubnetDetails(ipInput: string, cidrInput: number) {
     const cidr = Math.min(32, Math.max(8, cidrInput || 24));
     const ip = this.isValidIPv4(ipInput) ? ipInput.trim() : '192.168.10.1';
