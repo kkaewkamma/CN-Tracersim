@@ -1,4 +1,4 @@
-# CN-Tracersim (NetSim Touch v5.2 Modernized) 🎓🌐📱🚀
+# CN-Tracersim (v5.2 Enterprise Edition) 
 
 <p align="center">
   <strong>เว็บแอปพลิเคชันจำลองเครือข่ายและฝึกพิมพ์คำสั่ง Cisco IOS CLI สไตล์ Cisco Packet Tracer</strong><br>
@@ -22,43 +22,43 @@
 
 ---
 
-## 📑 สารบัญ (Table of Contents)
+## สารบัญ (Table of Contents)
 
-- [🌟 จุดเด่นสำคัญ (Key Highlights)](#-จุดเด่นสำคัญ-key-highlights)
-- [🎓 หลักสูตร Cisco Networking Academy (15 บทเรียน & 12 ปฏิบัติการ)](#-หลักสูตร-cisco-networking-academy-15-บทเรียน--12-ปฏิบัติการ)
-- [💻 Interactive Cisco IOS CLI Terminal](#-interactive-cisco-ios-cli-terminal)
-- [📐 สถาปัตยกรรมระบบ (Architecture & Tech Stack)](#-สถาปัตยกรรมระบบ-architecture--tech-stack)
-- [📁 โครงสร้างโปรเจกต์ (Project Structure)](#-โครงสร้างโปรเจกต์-project-structure)
-- [🚀 การติดตั้งและเริ่มใช้งาน (Getting Started)](#-การติดตั้งและเริ่มใช้งาน-getting-started)
-- [🧪 การรันชุดทดสอบ (Dual-Test Runners)](#-การรันชุดทดสอบ-dual-test-runners)
-- [📱 การใช้งานบน iPad และ PWA Offline](#-การใช้งานบน-ipad-และ-pwa-offline)
-- [📄 ใบอนุญาต (License)](#-ใบอนุญาต-license)
+- [ จุดเด่นสำคัญ (Key Highlights)](#-จุดเด่นสำคัญ-key-highlights)
+- [ หลักสูตร Cisco Networking Academy (15 บทเรียน & 12 ปฏิบัติการ)](#-หลักสูตร-cisco-networking-academy-15-บทเรียน--12-ปฏิบัติการ)
+- [ Interactive Cisco IOS CLI Terminal](#-interactive-cisco-ios-cli-terminal)
+- [ สถาปัตยกรรมระบบ (Architecture & Tech Stack)](#-สถาปัตยกรรมระบบ-architecture--tech-stack)
+- [ โครงสร้างโปรเจกต์ (Project Structure)](#-โครงสร้างโปรเจกต์-project-structure)
+- [ การติดตั้งและเริ่มใช้งาน (Getting Started)](#-การติดตั้งและเริ่มใช้งาน-getting-started)
+- [ การรันชุดทดสอบ (Dual-Test Runners)](#-การรันชุดทดสอบ-dual-test-runners)
+- [ การใช้งานบน iPad และ PWA Offline](#-การใช้งานบน-ipad-และ-pwa-offline)
+- [ ใบอนุญาต (License)](#-ใบอนุญาต-license)
 
 ---
 
-## 🌟 จุดเด่นสำคัญ (Key Highlights)
+## จุดเด่นสำคัญ (Key Highlights)
 
-1. **🎨 Interactive Topology Viewport:**
+1. ** Interactive Topology Viewport:**
    - ผืนผ้าใบจำลองเครือข่ายความละเอียดสูง รองรับอุปกรณ์ 5 ประเภท ได้แก่ **Router, Switch, PC, Server** และ **ISP Cloud**
    - รองรับการ Pan & Zoom (50% – 160%) และการลากวาง (Drag & Drop) ด้วยระบบสัมผัสลื่นไหล
    - เส้นสัญญาณ SVG อัจฉริยะ แสดงสถานะพอร์ต UP/Down, ป้ายระบุโหมด **802.1Q TRUNK** และตัวช่วยตรวจสอบพอร์ตอัตโนมัติ
 
-2. **⚡ Decoupled Pure Simulation Core:**
+2. ** Decoupled Pure Simulation Core:**
    - Network Simulation Core ถูกแยกออกจาก UI และ DOM โดยสิ้นเชิง (100% Framework Agnostic)
    - มีระบบจำลองโปรโตคอลครบวงจร: **L2 Switching (CAM Table, STP, EtherChannel, Port Security), L3 Routing (LPM, Static Route, OSPFv2 Single Area), Security & NAT (Standard/Extended ACL, Dynamic PAT Overload, Static NAT)** และ **DHCPv4 DORA State Machine**
 
-3. **🏆 PKA Auto-Grader (0% – 100%):**
+3. ** PKA Auto-Grader (0% – 100%):**
    - ตรวจผลลัพธ์การกำหนดค่าระบบเครือข่ายอัตโนมัติตามโจทย์แล็บ 12 ระดับ พร้อมวิเคราะห์จุดผิดพลาดและรายงานคำอธิบายละเอียด
 
-4. **🧮 Subnetting & VLSM Calculator ในตัว:**
+4. ** Subnetting & VLSM Calculator ในตัว:**
    - คำนวณ Network Address, First/Last Usable IP, Broadcast Address, Wildcard Mask และแจกแจง Bitwise Binary 32-bit ทันที
 
-5. **🔄 Zero-Downtime Dual-Running Strategy:**
+5. ** Zero-Downtime Dual-Running Strategy:**
    - เมานต์ Modern React 19 UI บน `#root` เป็นค่าเริ่มต้น พร้อมรองรับการสลับไปโหมด Legacy Canvas ผ่านพารามิเตอร์ `?legacy=true` ได้ทันที
 
 ---
 
-## 🎓 หลักสูตร Cisco Networking Academy (15 บทเรียน & 12 ปฏิบัติการ)
+## หลักสูตร Cisco Networking Academy (15 บทเรียน & 12 ปฏิบัติการ)
 
 เนื้อหาและแล็บถูกจัดโครงสร้างตามกรอบหลักสูตร Cisco NetAcad (Networking Basics, Switching, Routing and Wireless Essentials, และ Network Security):
 
@@ -97,7 +97,7 @@
 
 ---
 
-## 💻 Interactive Cisco IOS CLI Terminal
+## Interactive Cisco IOS CLI Terminal
 
 จำลองพฤติกรรมของ Cisco IOS Shell พร้อม Command Parser และ Context State Machine:
 - **โหมด CLI:** User EXEC (`Router>`), Privileged EXEC (`Router#`), Global Configuration (`Router(config)#`), Interface Mode (`Router(config-if)#`), และ Router Config (`Router(config-router)#`)
@@ -114,7 +114,7 @@
 
 ---
 
-## 📐 สถาปัตยกรรมระบบ (Architecture & Tech Stack)
+## สถาปัตยกรรมระบบ (Architecture & Tech Stack)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -146,7 +146,7 @@
 
 ---
 
-## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+## โครงสร้างโปรเจกต์ (Project Structure)
 
 ```text
 CN-Tracersim/
@@ -156,7 +156,7 @@ CN-Tracersim/
 ├── dist/                              # PWA Precache Production Bundle
 ├── public/                            # PWA Manifest & App Icons
 ├── src/
-│   ├── core/                          # 🛡️ PURE SIMULATION ENGINE (No UI / No DOM)
+│   ├── core/                          # PURE SIMULATION ENGINE (No UI / No DOM)
 │   │   ├── types/                     # TypeScript Domain Models
 │   │   ├── engine/                    # Protocol Simulation Engines (IP, L2, ACL, NAT, OSPF, DHCP)
 │   │   ├── cli/                       # Cisco IOS Parser & State Machine
@@ -164,7 +164,7 @@ CN-Tracersim/
 │   ├── application/                   # ⚙️ APPLICATION & STATE MANAGEMENT
 │   │   ├── stores/                    # Zustand Stores (Topology, Session, Academy)
 │   │   └── services/                  # LabGraderService
-│   ├── presentation/                  # 🎨 REACT 19 PRESENTATION LAYER
+│   ├── presentation/                  # REACT 19 PRESENTATION LAYER
 │   │   ├── components/
 │   │   │   ├── canvas/                # Viewport, CableLayer, NodeRenderer
 │   │   │   ├── terminal/              # CiscoTerminalModal
@@ -185,7 +185,7 @@ CN-Tracersim/
 
 ---
 
-## 🚀 การติดตั้งและเริ่มใช้งาน (Getting Started)
+## การติดตั้งและเริ่มใช้งาน (Getting Started)
 
 ### ความต้องการของระบบ (Prerequisites)
 - [Node.js](https://nodejs.org/) v18.0 ขึ้นไป (แนะนำ v20+)
@@ -214,7 +214,7 @@ npm run build
 
 ---
 
-## 🧪 การรันชุดทดสอบ (Dual-Test Runners)
+## การรันชุดทดสอบ (Dual-Test Runners)
 
 โปรเจกต์นี้ใช้ระบบทดสอบแบบคู่ขนาน (Dual-Test Runners) เพื่อรับประกันความเข้ากันได้ 100%:
 
@@ -231,7 +231,7 @@ npm test && npm run test:legacy
 
 ---
 
-## 📱 การใช้งานบน iPad และ PWA Offline
+## การใช้งานบน iPad และ PWA Offline
 
 CN-Tracersim รองรับการติดตั้งเป็น Progressive Web App (PWA) บน iPad, แท็บเล็ต Android และคอมพิวเตอร์เดสก์ท็อป:
 1. เปิดแอปพลิเคชันผ่าน Safari บน iPad หรือ Chrome บนแท็บเล็ต
@@ -240,6 +240,6 @@ CN-Tracersim รองรับการติดตั้งเป็น Progre
 
 ---
 
-## 📄 ใบอนุญาต (License)
+## ใบอนุญาต (License)
 
 โปรเจกต์นี้เผยแพร่ภายใต้ใบอนุญาต [MIT License](./LICENSE)

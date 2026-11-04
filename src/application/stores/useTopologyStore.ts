@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { NetworkDevice, NetworkCable, DeviceType } from '@core/types';
 import { IpMath } from '@core/engine/ip-math';
+import { generatePresetTopology } from '@core/curriculum/presets';
 
 interface TopologyState {
   devices: NetworkDevice[];
@@ -18,16 +19,19 @@ interface TopologyState {
   removeDevice: (id: string) => void;
   addCable: (from: string, fromPort: string, to: string, toPort: string) => NetworkCable;
   removeCable: (id: string) => void;
+  loadPreset: (presetId: string) => void;
   setTopology: (devices: NetworkDevice[], cables: NetworkCable[], presetId?: string) => void;
   resetTopology: () => void;
 }
 
+const initialPreset = generatePresetTopology('lab11');
+
 export const useTopologyStore = create<TopologyState>((set, get) => ({
-  devices: [],
-  cables: [],
-  selectedDeviceId: null,
-  activePresetId: 'lab1',
-  counters: { router: 0, switch: 0, pc: 1, server: 1, cloud: 1 },
+  devices: initialPreset.devices,
+  cables: initialPreset.cables,
+  selectedDeviceId: initialPreset.devices[0]?.id || null,
+  activePresetId: 'lab11',
+  counters: { router: 1, switch: 0, pc: 1, server: 1, cloud: 0 },
 
   selectDevice: (id) => set({ selectedDeviceId: id }),
 
@@ -136,6 +140,16 @@ export const useTopologyStore = create<TopologyState>((set, get) => ({
     cables: state.cables.filter(c => c.id !== id)
   })),
 
+  loadPreset: (presetId) => {
+    const preset = generatePresetTopology(presetId);
+    set({
+      devices: preset.devices,
+      cables: preset.cables,
+      activePresetId: presetId,
+      selectedDeviceId: preset.devices[0]?.id || null
+    });
+  },
+
   setTopology: (devices, cables, presetId = 'custom') => set({
     devices,
     cables,
@@ -150,4 +164,3 @@ export const useTopologyStore = create<TopologyState>((set, get) => ({
     activePresetId: 'blank'
   })
 }));
-

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { NETACAD_LESSONS, PRACTICAL_LABS_CATALOG } from '@core/curriculum/syllabus-data';
 import { useAcademyStore } from '@application/stores/useAcademyStore';
+import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { 
   BookOpen, Award, CheckCircle2, ChevronRight, X, Play, 
-  ShieldCheck, Zap
+  ShieldCheck, Zap, FileText, Terminal
 } from 'lucide-react';
 
 interface AcademyModalProps {
@@ -13,6 +14,7 @@ interface AcademyModalProps {
 export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'lessons' | 'labs'>('lessons');
   const { activeLessonId, setActiveLesson, activePracticalLabId, setActiveLab } = useAcademyStore();
+  const { loadPreset } = useTopologyStore();
 
   const selectedLesson = NETACAD_LESSONS.find(l => l.id === activeLessonId) || NETACAD_LESSONS[0];
   const selectedLab = PRACTICAL_LABS_CATALOG.find(l => l.id === activePracticalLabId) || PRACTICAL_LABS_CATALOG[0];
@@ -114,7 +116,10 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-                  <h4 className="text-xs font-bold text-cyan-300">📖 สรุปหลักการทำงาน (Theory Summary)</h4>
+                  <h4 className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                    <FileText size={14} className="text-cyan-400" />
+                    <span>สรุปหลักการทำงาน (Theory Summary)</span>
+                  </h4>
                   <p className="text-xs text-slate-300 leading-relaxed">{selectedLesson.theorySummary}</p>
                 </div>
 
@@ -139,7 +144,10 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
                 {/* Exam Tips */}
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
-                  <div className="text-xs font-bold text-amber-300">🔥 จุดเน้นสำหรับสอบ (Exam Highlights):</div>
+                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <Award size={14} className="text-amber-400" />
+                    <span>จุดเน้นสำหรับสอบ (Exam Highlights):</span>
+                  </div>
                   <ul className="list-disc list-inside text-xs text-slate-200 space-y-1">
                     {selectedLesson.examTips.map((tip, idx) => (
                       <li key={idx}>{tip}</li>
@@ -149,7 +157,10 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
                 {/* Cheat Sheet */}
                 <div className="space-y-2">
-                  <div className="text-xs font-bold text-white">💻 สรุปคำสั่ง Cisco IOS ที่เกี่ยวข้อง:</div>
+                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Terminal size={14} className="text-cyan-400" />
+                    <span>สรุปคำสั่ง Cisco IOS ที่เกี่ยวข้อง:</span>
+                  </div>
                   <div className="space-y-1.5 font-mono text-xs">
                     {selectedLesson.cheatSheet.map((item, idx) => (
                       <div key={idx} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
@@ -203,9 +214,10 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                   </div>
                   <button 
                     onClick={() => {
+                      loadPreset(selectedLab.id);
                       onClose();
                     }}
-                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow"
+                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow transition active:scale-95"
                   >
                     <Play size={14} />
                     <span>เริ่มทำแล็บนี้</span>

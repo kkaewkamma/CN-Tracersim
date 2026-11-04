@@ -4,13 +4,24 @@ import { PacketSimulationResult } from '@core/engine/packet-tracer';
 export type ActiveTool = 'select' | 'cable' | 'packet' | 'http' | 'delete';
 export type SimMode = 'realtime' | 'step';
 
+export type ModalType = 
+  | 'none' 
+  | 'cli' 
+  | 'config' 
+  | 'inspect_pdu' 
+  | 'academy' 
+  | 'presets' 
+  | 'subnet_calc' 
+  | 'grader_report' 
+  | 'import_export';
+
 interface SessionState {
   currentTool: ActiveTool;
   simMode: SimMode;
   cableSource: { deviceId: string; portName: string } | null;
   packetSource: { deviceId: string; protocol: 'icmp' | 'tcp' } | null;
   lastSimulationResult: PacketSimulationResult | null;
-  activeModal: 'none' | 'cli' | 'config' | 'inspect_pdu' | 'academy' | 'presets' | 'subnet_calc';
+  activeModal: ModalType;
   modalDeviceId: string | null;
 
   setTool: (tool: ActiveTool) => void;
@@ -18,7 +29,7 @@ interface SessionState {
   setCableSource: (source: { deviceId: string; portName: string } | null) => void;
   setPacketSource: (source: { deviceId: string; protocol: 'icmp' | 'tcp' } | null) => void;
   setLastSimulationResult: (result: PacketSimulationResult | null) => void;
-  openModal: (modal: SessionState['activeModal'], deviceId?: string) => void;
+  openModal: (modal: ModalType, deviceId?: string) => void;
   closeModal: () => void;
 }
 

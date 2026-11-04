@@ -6,14 +6,15 @@ import { NodeRenderer } from './NodeRenderer';
 import { NetworkDevice } from '@core/types';
 import { 
   MousePointer, Cable, Trash2, ZoomIn, ZoomOut, RotateCcw, 
-  Send, Globe, CheckCircle2, AlertTriangle, X
+  Send, Globe, CheckCircle2, AlertTriangle, X, Layers
 } from 'lucide-react';
 
 export const TopologyViewport: React.FC = () => {
   const { devices, cables, selectDevice, addCable } = useTopologyStore();
   const { 
     currentTool, setTool, cableSource, setCableSource,
-    packetSource, setPacketSource, lastSimulationResult, setLastSimulationResult
+    packetSource, setPacketSource, lastSimulationResult, setLastSimulationResult,
+    openModal
   } = useSessionStore();
 
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -152,7 +153,7 @@ export const TopologyViewport: React.FC = () => {
       {/* Empty State Banner if no devices */}
       {devices.length === 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-30">
-          <div className="font-mono text-cyan-400 font-bold text-base">NetSim Touch v5.2 Modernized Canvas</div>
+          <div className="font-mono text-cyan-400 font-bold text-base">CN-Tracersim v5.2 Enterprise Canvas</div>
           <p className="text-xs text-slate-400 mt-1">เลือกวาง Router, Switch หรือ PC จากแถบซ้ายมือเพื่อเริ่มต้นออกแบบเครือข่าย</p>
         </div>
       )}
@@ -198,6 +199,15 @@ export const TopologyViewport: React.FC = () => {
           <p className="text-xs text-slate-200 mt-2 font-medium leading-relaxed">
             {lastSimulationResult.reason}
           </p>
+
+          {/* Inspect PDU Button */}
+          <button
+            onClick={() => openModal('inspect_pdu')}
+            className="mt-2.5 w-full py-1.5 px-3 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/35 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition"
+          >
+            <Layers size={13} />
+            <span>ตรวจสอบ OSI 7 Layers (PDU)</span>
+          </button>
 
           {/* Hop-by-Hop Trace */}
           {lastSimulationResult.hops.length > 0 && (
@@ -300,7 +310,7 @@ export const TopologyViewport: React.FC = () => {
       </div>
 
       {/* Floating Zoom Controls (Bottom Right) */}
-      <div className="absolute bottom-5 right-5 bg-slate-900/90 border border-cisco-border px-2 py-1.5 rounded-2xl shadow-xl flex items-center gap-1 backdrop-blur z-20">
+      <div className="absolute bottom-5 right-5 bg-slate-900/90 border border-cisco-border px-2 py-1.5 rounded-2xl shadow-xl flex items-center gap-1.5 backdrop-blur z-20">
         <button
           onClick={() => setZoom((prev) => Math.min(1.6, Math.round((prev + 0.1) * 10) / 10))}
           className="w-7 h-7 rounded-xl hover:bg-slate-800 text-slate-300 flex items-center justify-center transition"

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
 import { AppHeader } from './layouts/AppHeader';
@@ -6,12 +6,20 @@ import { SubnetCalculatorModal } from './components/modals/SubnetCalculatorModal
 import { CiscoTerminalModal } from './components/terminal/CiscoTerminalModal';
 import { NetAcadCoachModal } from './components/modals/NetAcadCoachModal';
 import { DeviceConfigModal } from './components/modals/DeviceConfigModal';
+import { PduInspectorModal } from './components/modals/PduInspectorModal';
+import { LabGraderReportModal } from './components/modals/LabGraderReportModal';
+import { LabPresetModal } from './components/modals/LabPresetModal';
+import { LabImportExportModal } from './components/modals/LabImportExportModal';
 import { TopologyViewport } from './components/canvas/TopologyViewport';
 import { Server, Router, Laptop, Cloud, Terminal, Settings } from 'lucide-react';
 
 export const App: React.FC = () => {
   const { devices, selectedDeviceId, addDevice } = useTopologyStore();
   const { activeModal, closeModal, openModal } = useSessionStore();
+
+  useEffect(() => {
+    document.title = 'CN-Tracersim - Enterprise Network Simulator & Cisco IOS CLI';
+  }, []);
 
   const selectedDevice = devices.find(d => d.id === selectedDeviceId);
 
@@ -23,10 +31,10 @@ export const App: React.FC = () => {
       {/* Main Workspace Area */}
       <div className="flex-1 relative flex overflow-hidden">
         {/* Left Palette (Devices) */}
-        <aside className="w-16 bg-slate-900/80 border-r border-cisco-border flex flex-col items-center py-4 gap-3 z-20">
+        <aside className="w-16 bg-[#0a0f18] border-r border-cisco-border flex flex-col items-center py-4 gap-3 z-20 select-none">
           <button 
-            onClick={() => addDevice('router', 300, 200)}
-            className="w-11 h-11 rounded-2xl bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group"
+            onClick={() => addDevice('router', 320, 200)}
+            className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-800 hover:border-cyan-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group shadow"
             title="เพิ่ม Cisco Router"
           >
             <Router size={18} className="group-hover:scale-110 transition" />
@@ -34,8 +42,8 @@ export const App: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => addDevice('switch', 300, 280)}
-            className="w-11 h-11 rounded-2xl bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group"
+            onClick={() => addDevice('switch', 320, 300)}
+            className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 hover:border-emerald-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group shadow"
             title="เพิ่ม Catalyst Switch"
           >
             <Server size={18} className="group-hover:scale-110 transition" />
@@ -43,8 +51,8 @@ export const App: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => addDevice('pc', 200, 350)}
-            className="w-11 h-11 rounded-2xl bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 hover:border-sky-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group"
+            onClick={() => addDevice('pc', 200, 380)}
+            className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-sky-400 border border-slate-800 hover:border-sky-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group shadow"
             title="เพิ่ม PC Workstation"
           >
             <Laptop size={18} className="group-hover:scale-110 transition" />
@@ -52,8 +60,8 @@ export const App: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => addDevice('server', 400, 350)}
-            className="w-11 h-11 rounded-2xl bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 hover:border-purple-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group"
+            onClick={() => addDevice('server', 440, 380)}
+            className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-purple-400 border border-slate-800 hover:border-purple-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group shadow"
             title="เพิ่ม Server"
           >
             <Server size={18} className="group-hover:scale-110 transition" />
@@ -61,8 +69,8 @@ export const App: React.FC = () => {
           </button>
 
           <button 
-            onClick={() => addDevice('cloud', 450, 150)}
-            className="w-11 h-11 rounded-2xl bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 hover:border-rose-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group"
+            onClick={() => addDevice('cloud', 480, 160)}
+            className="w-11 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800 text-rose-400 border border-slate-800 hover:border-rose-500/50 flex flex-col items-center justify-center gap-0.5 transition active:scale-95 group shadow"
             title="เพิ่ม ISP Cloud"
           >
             <Cloud size={18} className="group-hover:scale-110 transition" />
@@ -125,6 +133,22 @@ export const App: React.FC = () => {
 
       {activeModal === 'academy' && (
         <NetAcadCoachModal onClose={closeModal} />
+      )}
+
+      {activeModal === 'inspect_pdu' && (
+        <PduInspectorModal onClose={closeModal} />
+      )}
+
+      {activeModal === 'grader_report' && (
+        <LabGraderReportModal onClose={closeModal} />
+      )}
+
+      {activeModal === 'presets' && (
+        <LabPresetModal onClose={closeModal} />
+      )}
+
+      {activeModal === 'import_export' && (
+        <LabImportExportModal onClose={closeModal} />
       )}
     </div>
   );
