@@ -1,0 +1,99 @@
+/* NetSim Touch - Global and iPad-optimized styles */
+* {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+input, textarea, .selectable-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+    background-color: #0b111a;
+    overscroll-behavior: none;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Blueprint Grid Background */
+.bg-grid {
+    background-size: 32px 32px;
+    background-image: 
+        linear-gradient(to right, rgba(37, 54, 77, 0.28) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(37, 54, 77, 0.28) 1px, transparent 1px);
+}
+
+/* Device node interactive styling */
+.device-node {
+    touch-action: none;
+    transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.device-node.selected .device-icon-box {
+    box-shadow: 0 0 0 3px #049fd9, 0 10px 25px -5px rgba(4, 159, 217, 0.5);
+    border-color: #38bdf8;
+    background-color: #1e293b;
+}
+
+.device-node:active {
+    transform: scale(1.03);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0d1520;
+}
+::-webkit-scrollbar-thumb {
+    background: #2b405c;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #3b5578;
+}
+
+/* PDU packet animation */
+.pdu-packet {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    margin-left: -14px;
+    margin-top: -14px;
+    pointer-events: none;
+    z-index: 40;
+    transition: transform 0.05s linear;
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.7); opacity: 0.9; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.pdu-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 9999px;
+    border: 2px solid #38bdf8;
+    animation: pulse-ring 1.3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Smooth modal transitions */
+.modal-backdrop {
+    animation: fadeIn 0.15s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NetSim Touch">
+    <meta name="theme-color" content="#0b111a">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg">
+    <title>NetSim Touch - iPad Packet Tracer & Cisco CLI</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cisco: {
+                            blue: '#049fd9',
+                            dark: '#0b111a',
+                            panel: '#152030',
+                            border: '#25364d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body class="text-slate-100 font-sans h-screen w-screen flex flex-col select-none overflow-hidden bg-cisco-dark">
+
+    <!-- TOP NAVIGATION & STATUS BAR -->
+    <header class="h-14 bg-cisco-panel border-b border-cisco-border px-3 sm:px-5 flex items-center justify-between shrink-0 z-30 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke-width="2"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7v10m-5-5h10M9 9l3-3 3 3M9 15l3 3 3-3"/>
+                </svg>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">NetSim <span class="text-cyan-400">Touch</span></h1>
+                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">v2.0 PWA</span>
+                </div>
+                <p class="text-[11px] text-slate-400 hidden md:block">Cisco IOS CLI & Visual Packet Tracer Lab</p>
+            </div>
+        </div>
+
+        <div id="modeBanner" class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-xs font-medium text-cyan-300 shadow-inner">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span id="modeBannerText">โหมดเลือกและลากย้าย (แตะ 1 ครั้งเพื่อเลือก, แตะ 2 ครั้งเพื่อเปิด CLI)</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="window.appState.loadPresetTopology('subnets')" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1.5 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                <span class="hidden sm:inline">โหลดแล็บตัวอย่าง</span>
+                <span class="sm:hidden">แล็บตัวอย่าง</span>
+            </button>
+            <button onclick="ModalController.openLabModal()" class="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:scale-95 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center gap-1.5 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                <span>บันทึก/โหลด</span>
+            </button>
+            <button onclick="window.appState.loadPresetTopology('blank')" class="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 text-xs font-medium transition" title="ล้างกระดาน">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE WORKSPACE -->
+    <div class="flex-1 flex relative overflow-hidden">
+        <!-- LEFT TOOLS PALETTE -->
+        <aside class="w-16 sm:w-20 bg-cisco-panel border-r border-cisco-border flex flex-col items-center py-3 gap-2.5 z-20 shrink-0 shadow-xl">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">เครื่องมือ</span>
+
+            <button id="tool-select" onclick="window.appState.setTool('select')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-cyan-500/20 text-cyan-300 border-2 border-cyan-400 transition active:scale-95 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                <span class="text-[10px] font-medium">เลือก/ย้าย</span>
+            </button>
+
+            <button id="tool-cable" onclick="window.appState.setTool('cable')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                <span class="text-[10px] font-medium">ต่อสายแลน</span>
+            </button>
+
+            <button id="tool-pdu" onclick="window.appState.setTool('pdu')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="text-[10px] font-medium">ส่ง Ping</span>
+            </button>
+
+            <button id="tool-delete" onclick="window.appState.setTool('delete')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span class="text-[10px] font-medium">ลบออก</span>
+            </button>
+
+            <div class="w-10 border-t border-slate-700/80 my-1"></div>
+
+            <button id="btnOpenConfig" onclick="ModalController.openConfigModal(window.appState.selectedDeviceId)" disabled class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="text-[10px] font-medium">ตั้งค่า/CLI</span>
+            </button>
+        </aside>
+
+        <!-- TOPOLOGY CANVAS -->
+        <main id="canvasContainer" class="flex-1 relative bg-grid overflow-hidden">
+            <svg id="cableLayer" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+            <div id="nodesLayer" class="absolute inset-0 w-full h-full z-10"></div>
+            <div id="pduLayer" class="absolute inset-0 w-full h-full pointer-events-none z-20"></div>
+
+            <!-- QUICK ACTION PILL (FLOATING ON SELECT) -->
+            <div id="quickActionPill" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3">
+                <div class="flex flex-col">
+                    <span id="quickPillName" class="text-xs font-bold text-white">Router0</span>
+                    <span id="quickPillSub" class="text-[10px] font-mono text-cyan-400">Cisco 2911 Router</span>
+                </div>
+                <div class="h-6 w-px bg-slate-700"></div>
+                <button onclick="ModalController.openConfigModal(window.appState.selectedDeviceId, 'gui')" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 active:scale-95">
+                    <span>⚙️ ตั้งค่า GUI</span>
+                </button>
+                <button onclick="ModalController.openConfigModal(window.appState.selectedDeviceId, 'cli')" class="px-3 py-1.5 rounded-xl bg-indigo-500/25 hover:bg-indigo-500/35 text-indigo-200 border border-indigo-400/40 text-xs font-mono font-semibold flex items-center gap-1.5 active:scale-95">
+                    <span>>_ IOS CLI</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR (EVENT LOG & ARP/IP TABLE) -->
+        <aside class="w-72 lg:w-80 bg-cisco-panel border-l border-cisco-border flex flex-col z-20 shrink-0 hidden md:flex">
+            <div class="px-3.5 py-2.5 border-b border-cisco-border flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">PDU & Simulation Log</h2>
+                </div>
+                <button onclick="window.appState.clearEventLog()" class="text-[11px] text-slate-400 hover:text-white transition">ล้างประวัติ</button>
+            </div>
+            <div id="eventLogList" class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-mono"></div>
+            
+            <div class="border-t border-cisco-border p-3 bg-slate-900/70">
+                <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                    <span>ตารางสถานะ IP อุปกรณ์ (Live ARP)</span>
+                    <span id="deviceCountBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 text-[10px] font-bold border border-slate-700">0 Nodes</span>
+                </div>
+                <div id="ipSummaryList" class="max-h-40 overflow-y-auto space-y-1.5 text-[11px] font-mono text-slate-300"></div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- BOTTOM PALETTE (ADD DEVICES) -->
+    <footer class="h-20 bg-cisco-panel border-t border-cisco-border px-3 sm:px-6 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto py-1">
+            <span class="text-xs font-semibold text-slate-400 mr-1 hidden lg:inline">เพิ่มอุปกรณ์ (แตะเพื่อวาง):</span>
+            
+            <button onclick="window.appState.addDeviceFromPalette('router')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v4m0 2v4m-5-5h4m2 0h4M9 9l2 2m4 4l2 2m0-8l-2 2m-4 4l-2 2"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Router</div><div class="text-[10px] text-slate-400 font-mono">Cisco 2911</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('switch')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h6m-2-2l2 2-2 2M17 14h-6m2-2l-2 2 2 2"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Switch</div><div class="text-[10px] text-slate-400 font-mono">Catalyst 2960</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('pc')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ PC Host</div><div class="text-[10px] text-slate-400 font-mono">Workstation</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('server')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="6" rx="1.5"/><rect x="4" y="9" width="16" height="6" rx="1.5"/><rect x="4" y="15" width="16" height="6" rx="1.5"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Server</div><div class="text-[10px] text-slate-400 font-mono">Web Server</div></div>
+            </button>
+        </div>
+    </footer>
+
+    <!-- PORT SELECTOR MODAL -->
+    <div id="portModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="font-bold text-base text-white">เลือกพอร์ตเชื่อมต่อสายสัญญาณ</h3>
+                <button onclick="ModalController.closePortModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4 my-4">
+                <div>
+                    <div id="portSourceTitle" class="text-xs font-bold text-cyan-400 mb-2 truncate">ต้นทาง:</div>
+                    <div id="portSourceList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+                <div>
+                    <div id="portTargetTitle" class="text-xs font-bold text-emerald-400 mb-2 truncate">ปลายทาง:</div>
+                    <div id="portTargetList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                <button onclick="ModalController.closePortModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">ยกเลิก</button>
+                <button onclick="ModalController.confirmCableConnection()" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 text-xs font-bold shadow-lg">เสียบสายแลน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIG / CLI MODAL -->
+    <div id="configModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-3xl w-full h-[88vh] max-h-[700px] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-5 py-3.5 bg-slate-900 border-b border-cisco-border flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div id="modalDeviceBadge" class="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 font-bold text-sm">R</div>
+                    <div>
+                        <h3 id="modalDeviceTitle" class="font-bold text-base text-white">Router0</h3>
+                        <p id="modalDeviceSub" class="text-xs text-slate-400 font-mono">Cisco IOS Software</p>
+                    </div>
+                </div>
+                <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+                    <button id="tabBtnGui" onclick="ModalController.switchConfigTab('gui')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-cyan-500 text-slate-950">⚙️ ตั้งค่า GUI</button>
+                    <button id="tabBtnCli" onclick="ModalController.switchConfigTab('cli')" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition text-slate-400 hover:text-white">>_ IOS CLI</button>
+                </div>
+                <button onclick="ModalController.closeConfigModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <!-- Tab Content: GUI -->
+            <div id="tabContentGui" class="flex-1 overflow-y-auto p-5 space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/70 p-4 rounded-2xl border border-slate-800">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Hostname (ชื่ออุปกรณ์)</label>
+                        <input id="guiHostname" type="text" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400" onchange="ModalController.saveGuiHostname(this.value)">
+                    </div>
+                    <div id="guiGatewayBox">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Default Gateway (เราเตอร์ชี้ทาง)</label>
+                        <input id="guiGateway" type="text" placeholder="เช่น 192.168.10.1" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400" onchange="ModalController.saveGuiGateway(this.value)">
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3">Interfaces & Ports Configuration</h4>
+                    <div id="guiInterfacesList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- Tab Content: CLI -->
+            <div id="tabContentCli" class="hidden flex-1 flex flex-col bg-[#070b10] overflow-hidden">
+                <!-- Smart Quick-Chips for Touch -->
+                <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto shrink-0">
+                    <span class="text-[10px] font-mono text-slate-400 mr-1 shrink-0">ปุ่มลัด iPad:</span>
+                    <div id="cliQuickChips" class="flex items-center gap-1.5"></div>
+                </div>
+                <!-- Terminal Output -->
+                <div id="cliTerminalOutput" class="flex-1 p-4 overflow-y-auto font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap leading-relaxed selectable-text" onclick="document.getElementById('cliInput').focus()"></div>
+                <!-- Terminal Input Form -->
+                <form onsubmit="event.preventDefault(); ModalController.submitCliCommand();" class="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-2 shrink-0">
+                    <span id="cliPromptLabel" class="font-mono text-xs sm:text-sm text-cyan-300 font-bold shrink-0">Router></span>
+                    <input id="cliInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="พิมพ์คำสั่ง Cisco IOS ที่นี่ หรือแตะปุ่มลัดด้านบน..." class="flex-1 bg-transparent font-mono text-xs sm:text-sm text-white focus:outline-none">
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-mono font-bold text-xs">Enter ↵</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAB SAVE / LOAD MODAL -->
+    <div id="labModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="font-bold text-base text-white">บันทึกและส่งออกแล็บ (JSON)</h3>
+                <button onclick="ModalController.closeLabModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div>
+                <p class="text-xs text-slate-300 mb-2">คัดลอกข้อความ JSON ด้านล่างเก็บไว้ หรือวางโค้ด JSON เพื่อโหลดแล็บกลับมาทำต่อ:</p>
+                <textarea id="labJsonTextArea" rows="9" class="w-full p-3 rounded-2xl bg-slate-900 border border-slate-700 font-mono text-xs text-cyan-300 focus:outline-none focus:border-cyan-400 selectable-text"></textarea>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-slate-700">
+                <button onclick="ModalController.copyLabJson()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold">📋 คัดลอก JSON</button>
+                <div class="flex gap-2">
+                    <button onclick="ModalController.closeLabModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold">ปิด</button>
+                    <button onclick="ModalController.importLabJson()" class="px-5 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 text-white text-xs font-bold shadow-lg">โหลดโครงข่ายนี้</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION SCRIPTS -->
+    <script src="./js/network-engine.js"></script>
+    <script src="./js/cisco-cli.js"></script>
+    <script src="./js/modals.js"></script>
+    <script src="./js/canvas-ui.js"></script>
+    <script src="./js/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => {
+                    console.log('SW registration skipped:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
