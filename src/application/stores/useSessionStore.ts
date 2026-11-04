@@ -13,7 +13,8 @@ export type ModalType =
   | 'presets' 
   | 'subnet_calc' 
   | 'grader_report' 
-  | 'import_export';
+  | 'import_export'
+  | 'logs';
 
 interface SessionState {
   currentTool: ActiveTool;

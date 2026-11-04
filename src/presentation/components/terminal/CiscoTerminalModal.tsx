@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CiscoCliStateMachine } from '@core/cli/cisco-cli-parser';
-import { Terminal, X, CornerDownLeft, RotateCcw } from 'lucide-react';
+import { useTopologyStore } from '@application/stores/useTopologyStore';
+import { useAcademyStore } from '@application/stores/useAcademyStore';
+import { NETACAD_LESSONS } from '@core/curriculum/syllabus-data';
+import { Terminal, X, CornerDownLeft, RotateCcw, Sparkles } from 'lucide-react';
 
 interface TerminalModalProps {
   device: any;
@@ -9,14 +12,25 @@ interface TerminalModalProps {
 }
 
 export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClose, onConfigChange }) => {
+  const { updateDevice } = useTopologyStore();
+  const { activeLessonId } = useAcademyStore();
   const [cli] = useState(() => new CiscoCliStateMachine(device));
   const [history, setHistory] = useState<string[]>([
-    `Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M\nTechnical Support: http://www.cisco.com/techsupport\n\nPress RETURN to get started!\n`
+    `Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M\nTechnical Support: http://www.cisco.com/techsupport\n\nPress RETURN or type '?' for command help!\n`
   ]);
   const [inputVal, setInputVal] = useState('');
   const [prompt, setPrompt] = useState(() => cli.getPrompt());
+
+  // Command History Navigation State
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [historyPointer, setHistoryPointer] = useState<number>(-1);
+
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Active Lesson Context for CLI Tutor
+  const activeLesson = NETACAD_LESSONS.find(l => l.id === activeLessonId) || NETACAD_LESSONS[0];
+  const recommendedCommands = activeLesson.cheatSheet || [];
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +45,11 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
     const cmd = inputVal.trim();
     setInputVal('');
 
+    if (cmd) {
+      setCmdHistory(prev => [...prev, cmd]);
+      setHistoryPointer(-1);
+    }
+
     const currentPrompt = prompt;
     const res = cli.execute(cmd);
 
@@ -40,14 +59,63 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
     ]);
 
     setPrompt(res.prompt);
-    if (res.stateChanged && onConfigChange) {
-      onConfigChange();
+
+    // Sync state changes directly back into Zustand Topology Store
+    if (res.stateChanged) {
+      updateDevice(device.id, (d) => ({
+        ...d,
+        ...cli.getDevice()
+      }));
+      if (onConfigChange) {
+        onConfigChange();
+      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Command History: ArrowUp
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (cmdHistory.length === 0) return;
+      const nextPointer = historyPointer === -1 ? cmdHistory.length - 1 : Math.max(0, historyPointer - 1);
+      setHistoryPointer(nextPointer);
+      setInputVal(cmdHistory[nextPointer] || '');
+    }
+
+    // Command History: ArrowDown
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyPointer === -1) return;
+      const nextPointer = historyPointer + 1;
+      if (nextPointer >= cmdHistory.length) {
+        setHistoryPointer(-1);
+        setInputVal('');
+      } else {
+        setHistoryPointer(nextPointer);
+        setInputVal(cmdHistory[nextPointer] || '');
+      }
+    }
+
+    // Tab Autocomplete
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      if (!inputVal.trim()) return;
+      const matches = cli.autocomplete(inputVal);
+      if (matches.length === 1) {
+        setInputVal(matches[0]);
+      } else if (matches.length > 1) {
+        setHistory(prev => [
+          ...prev,
+          `${prompt} ${inputVal}\n${matches.join('   ')}`
+        ]);
+      }
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-[#0b1017] border border-cisco-border rounded-3xl max-w-4xl w-full h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-[#0b1017] border border-cisco-border rounded-3xl max-w-4xl w-full h-[88vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        
         {/* Terminal Header */}
         <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -60,8 +128,11 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800 text-cyan-300 border border-slate-700">
                   {device.type.toUpperCase()}
                 </span>
+                <span className="text-[10px] font-mono text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded bg-emerald-500/10">
+                  CLI Sync: ACTIVE
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400 font-mono">Cisco IOS Interactive CLI Terminal</p>
+              <p className="text-[11px] text-slate-400 font-mono">Cisco IOS Interactive CLI Terminal (Tab = Autocomplete, Up/Down = History)</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -82,6 +153,31 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
           </div>
         </div>
 
+        {/* NetAcad Interactive Tutor Guide Bar */}
+        {recommendedCommands.length > 0 && (
+          <div className="px-4 py-2 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs overflow-x-auto gap-2">
+            <div className="flex items-center gap-2 text-slate-400 shrink-0 font-mono text-[11px]">
+              <Sparkles size={13} className="text-cyan-400" />
+              <span className="text-cyan-300 font-bold">{activeLesson.number} Coach:</span>
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+              {recommendedCommands.slice(0, 4).map((rc, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setInputVal(rc.cmd);
+                    inputRef.current?.focus();
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-800 hover:border-amber-500/40 font-mono text-[11px] shrink-0 transition flex items-center gap-1"
+                  title={rc.desc}
+                >
+                  <span>{rc.cmd}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Terminal Output Area */}
         <div 
           onClick={() => inputRef.current?.focus()}
@@ -101,8 +197,9 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
             type="text" 
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="flex-1 bg-transparent border-none text-white font-mono text-xs focus:outline-none placeholder-slate-600"
-            placeholder="พิมพ์คำสั่ง Cisco IOS ที่นี่ (กด ? เพื่อดูความช่วยเหลือ)..."
+            placeholder="พิมพ์คำสั่ง Cisco IOS ที่นี่ (กด Tab เพื่อเติมคำสั่ง, ? เพื่อดูคำอธิบาย)..."
             autoFocus
           />
           <button 
@@ -113,6 +210,7 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
             <CornerDownLeft size={13} />
           </button>
         </form>
+
       </div>
     </div>
   );

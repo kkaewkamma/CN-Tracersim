@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
 import { CableLayer } from './CableLayer';
@@ -6,13 +6,14 @@ import { NodeRenderer } from './NodeRenderer';
 import { NetworkDevice } from '@core/types';
 import { 
   MousePointer, Cable, Trash2, ZoomIn, ZoomOut, RotateCcw, 
-  Send, Globe, CheckCircle2, AlertTriangle, X, Layers
+  Send, Globe, CheckCircle2, AlertTriangle, X, Layers,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 export const TopologyViewport: React.FC = () => {
   const { devices, cables, selectDevice, addCable } = useTopologyStore();
   const { 
-    currentTool, setTool, cableSource, setCableSource,
+    currentTool, setTool, simMode, cableSource, setCableSource,
     packetSource, setPacketSource, lastSimulationResult, setLastSimulationResult,
     openModal
   } = useSessionStore();
@@ -20,6 +21,8 @@ export const TopologyViewport: React.FC = () => {
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1.0);
   const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [activeHopIndex, setActiveHopIndex] = useState<number>(0);
+
   const panStartRef = useRef<{ startX: number; startY: number; panX: number; panY: number }>({
     startX: 0,
     startY: 0,
@@ -29,6 +32,10 @@ export const TopologyViewport: React.FC = () => {
 
   // State for Port Selection Dialog
   const [portSelectDevice, setPortSelectDevice] = useState<NetworkDevice | null>(null);
+
+  useEffect(() => {
+    setActiveHopIndex(0);
+  }, [lastSimulationResult]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     // Only pan if clicking canvas background directly
@@ -107,6 +114,9 @@ export const TopologyViewport: React.FC = () => {
     );
   };
 
+  const currentHop = lastSimulationResult?.hops[activeHopIndex];
+  const activeHopDevice = currentHop ? devices.find(d => d.name === currentHop.device) : null;
+
   return (
     <div 
       className="flex-1 relative w-full h-full bg-[#080d15] overflow-hidden select-none cursor-default"
@@ -136,6 +146,20 @@ export const TopologyViewport: React.FC = () => {
       >
         {/* SVG Cable Layer */}
         <CableLayer />
+
+        {/* Active Hop Device Beacon */}
+        {activeHopDevice && (
+          <div
+            style={{
+              transform: `translate3d(${activeHopDevice.x}px, ${activeHopDevice.y}px, 0)`,
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              pointerEvents: 'none'
+            }}
+            className="w-16 h-16 rounded-2xl ring-4 ring-cyan-400 ring-offset-2 ring-offset-slate-950 animate-pulse z-10"
+          />
+        )}
 
         {/* Nodes Layer */}
         <div className="absolute inset-0 w-full h-full pointer-events-auto">
@@ -171,6 +195,46 @@ export const TopologyViewport: React.FC = () => {
           >
             ✕
           </button>
+        </div>
+      )}
+
+      {/* Floating Step-by-Step Simulation Controller Bar */}
+      {lastSimulationResult && simMode === 'step' && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-cyan-500/40 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur z-30 animate-in fade-in slide-in-from-top-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+            <span className="text-xs font-mono font-bold text-white">
+              Hop {activeHopIndex + 1}/{lastSimulationResult.hops.length}: {currentHop?.device}
+            </span>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-bold">
+              {currentHop?.layer} • {currentHop?.action.toUpperCase()}
+            </span>
+          </div>
+          <div className="h-4 w-px bg-slate-700"></div>
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={activeHopIndex === 0}
+              onClick={() => setActiveHopIndex(prev => Math.max(0, prev - 1))}
+              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-white text-xs font-semibold flex items-center gap-1 transition"
+            >
+              <ChevronLeft size={13} />
+              <span>ย้อน</span>
+            </button>
+            <button
+              disabled={activeHopIndex >= lastSimulationResult.hops.length - 1}
+              onClick={() => setActiveHopIndex(prev => Math.min(lastSimulationResult.hops.length - 1, prev + 1))}
+              className="px-3 py-1 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-30 text-slate-950 text-xs font-bold flex items-center gap-1 shadow transition"
+            >
+              <span>ถัดไป</span>
+              <ChevronRight size={13} />
+            </button>
+            <button
+              onClick={() => setLastSimulationResult(null)}
+              className="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs ml-1"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -212,25 +276,34 @@ export const TopologyViewport: React.FC = () => {
           {/* Hop-by-Hop Trace */}
           {lastSimulationResult.hops.length > 0 && (
             <div className="mt-3 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-              <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider">
-                Hop-by-Hop Simulation Trace:
+              <div className="text-[10px] font-mono text-cyan-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                <span>Hop-by-Hop Simulation Trace:</span>
+                <span className="text-slate-500">{lastSimulationResult.hops.length} Hops</span>
               </div>
-              {lastSimulationResult.hops.map((hop, idx) => (
-                <div
-                  key={idx}
-                  className="p-2 rounded-xl bg-slate-950/70 border border-slate-800 text-[11px] font-mono space-y-0.5"
-                >
-                  <div className="flex items-center justify-between text-slate-300 font-bold">
-                    <span>{idx + 1}. {hop.device}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300">
-                      {hop.layer} • {hop.action.toUpperCase()}
-                    </span>
+              {lastSimulationResult.hops.map((hop, idx) => {
+                const isCurrentActive = idx === activeHopIndex;
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => setActiveHopIndex(idx)}
+                    className={`p-2 rounded-xl border text-[11px] font-mono space-y-0.5 cursor-pointer transition ${
+                      isCurrentActive
+                        ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-200'
+                        : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-slate-300 font-bold">
+                      <span>{idx + 1}. {hop.device}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300">
+                        {hop.layer} • {hop.action.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-slate-400 text-[10px] leading-relaxed">
+                      {hop.details}
+                    </div>
                   </div>
-                  <div className="text-slate-400 text-[10px] leading-relaxed">
-                    {hop.details}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

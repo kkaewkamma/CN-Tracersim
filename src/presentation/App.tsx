@@ -10,11 +10,12 @@ import { PduInspectorModal } from './components/modals/PduInspectorModal';
 import { LabGraderReportModal } from './components/modals/LabGraderReportModal';
 import { LabPresetModal } from './components/modals/LabPresetModal';
 import { LabImportExportModal } from './components/modals/LabImportExportModal';
+import { NetworkEventLogsModal } from './components/modals/NetworkEventLogsModal';
 import { TopologyViewport } from './components/canvas/TopologyViewport';
 import { Server, Router, Laptop, Cloud, Terminal, Settings } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { devices, selectedDeviceId, addDevice } = useTopologyStore();
+  const { devices, selectedDeviceId, addDevice, updateDevice } = useTopologyStore();
   const { activeModal, closeModal, openModal } = useSessionStore();
 
   useEffect(() => {
@@ -127,7 +128,10 @@ export const App: React.FC = () => {
       {activeModal === 'cli' && selectedDevice && (
         <CiscoTerminalModal 
           device={selectedDevice} 
-          onClose={closeModal} 
+          onClose={closeModal}
+          onConfigChange={() => {
+            updateDevice(selectedDevice.id, d => ({ ...d }));
+          }}
         />
       )}
 
@@ -149,6 +153,10 @@ export const App: React.FC = () => {
 
       {activeModal === 'import_export' && (
         <LabImportExportModal onClose={closeModal} />
+      )}
+
+      {activeModal === 'logs' && (
+        <NetworkEventLogsModal onClose={closeModal} />
       )}
     </div>
   );

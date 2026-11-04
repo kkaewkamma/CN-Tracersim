@@ -6,7 +6,7 @@ import { CNLogo } from '../components/common/CNLogo';
 import { 
   MousePointer, Cable, Mail, Globe, Trash2, 
   Play, Pause, Award, Calculator, Layers, FileJson, 
-  CheckCircle2, AlertCircle
+  CheckCircle2, AlertCircle, Activity
 } from 'lucide-react';
 
 export const AppHeader: React.FC = () => {
@@ -109,6 +109,16 @@ export const AppHeader: React.FC = () => {
         >
           {simMode === 'step' ? <Pause size={13} /> : <Play size={13} />}
           <span className="hidden xl:inline">{simMode === 'step' ? 'Step Mode' : 'Realtime'}</span>
+        </button>
+
+        {/* Traffic & Event Logs */}
+        <button
+          onClick={() => openModal('logs')}
+          className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-800 flex items-center gap-1.5 transition"
+          title="เปิดบันทึกทราฟฟิกและเหตุการณ์เครือข่าย (Event Logs)"
+        >
+          <Activity size={14} className="text-cyan-400" />
+          <span className="hidden lg:inline">Logs</span>
         </button>
 
         {/* JSON Import/Export */}

@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { NetworkDevice, DeviceType } from '@core/types';
 import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
+import { useEventLogStore } from '@application/stores/useEventLogStore';
 import { PacketTracer } from '@core/engine/packet-tracer';
 import { Router, Server, Laptop, Cloud, Terminal } from 'lucide-react';
 
@@ -65,6 +66,12 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
 
     if (isDeleteMode) {
       removeDevice(device.id);
+      useEventLogStore.getState().addLog({
+        type: 'TOPOLOGY',
+        status: 'warn',
+        title: `ลบอุปกรณ์ ${device.name}`,
+        details: `ลบ ${device.name} (${device.type}) และสายเชื่อมต่อที่เกี่ยวข้องทั้งหมดออกจากผัง`
+      });
       return;
     }
 
@@ -95,6 +102,13 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
             packetSource.protocol === 'tcp' ? 80 : undefined
           );
           setLastSimulationResult(res);
+
+          useEventLogStore.getState().addLog({
+            type: packetSource.protocol === 'tcp' ? 'SIM_HTTP' : 'SIM_ICMP',
+            status: res.success ? 'ok' : 'fail',
+            title: `${packetSource.protocol.toUpperCase()}: ${srcDev.name} ➔ ${device.name}`,
+            details: res.reason
+          });
         }
         setPacketSource(null);
         setTool('select');
@@ -149,41 +163,47 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
   return (
     <div
       style={{
-        transform: `translate3d(${device.x - 30}px, ${device.y - 30}px, 0)`
+        transform: `translate3d(${device.x}px, ${device.y}px, 0)`,
+        position: 'absolute',
+        left: 0,
+        top: 0
       }}
-      className={`absolute left-0 top-0 w-16 h-16 rounded-2xl bg-slate-900/90 backdrop-blur-md border ${getBorderColor()} shadow-xl flex flex-col items-center justify-center cursor-grab active:cursor-grabbing transition-shadow select-none group touch-none`}
+      className="cursor-pointer select-none group"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {/* Device Icon */}
-      <div className="relative">
+      <div 
+        className={`w-16 h-16 rounded-2xl bg-slate-900/90 border-2 ${getBorderColor()} shadow-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:scale-105 backdrop-blur`}
+      >
         {getDeviceIcon(device.type)}
-        {/* Quick CLI Icon button on hover */}
+        <span className="text-[10px] font-mono font-bold text-white tracking-tight px-1 truncate max-w-[56px]">
+          {device.name}
+        </span>
+      </div>
+
+      {/* IP Badge Sub-label */}
+      {primaryIp && (
+        <div className="mt-1 text-center">
+          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-950/80 text-cyan-300 border border-slate-800">
+            {primaryIp}
+          </span>
+        </div>
+      )}
+
+      {/* CLI Quick Action Pill */}
+      {isSelected && (
         <button
           onClick={(e) => {
             e.stopPropagation();
-            selectDevice(device.id);
             openModal('cli', device.id);
           }}
-          className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-slate-800 border border-slate-600 text-cyan-300 opacity-0 group-hover:opacity-100 flex items-center justify-center hover:bg-cyan-500 hover:text-slate-950 transition shadow"
-          title="เปิด Cisco CLI"
+          className="absolute -top-3 -right-3 w-7 h-7 rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center shadow-lg transition animate-in zoom-in-75"
+          title="เปิด Cisco CLI Terminal"
         >
-          <Terminal size={10} />
+          <Terminal size={13} />
         </button>
-      </div>
-
-      {/* Device Name Label */}
-      <span className="text-[10px] font-bold font-mono text-slate-200 mt-1 truncate max-w-[56px] text-center">
-        {device.name}
-      </span>
-
-      {/* Primary IP Indicator */}
-      {primaryIp && (
-        <div className="absolute -bottom-4 px-1.5 py-0.2 rounded-md bg-slate-950/90 border border-slate-800 text-[9px] font-mono text-cyan-300 shadow whitespace-nowrap pointer-events-none">
-          {primaryIp}
-        </div>
       )}
     </div>
   );
