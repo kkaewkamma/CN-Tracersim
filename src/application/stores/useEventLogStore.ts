@@ -40,3 +40,4 @@ export const useEventLogStore = create<EventLogState>((set) => ({
 
   clearLogs: () => set({ logs: [] })
 }));
+

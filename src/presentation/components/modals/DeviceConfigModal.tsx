@@ -19,6 +19,30 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
   // Static Route Form State
   const [newRoute, setNewRoute] = useState({ network: '', mask: '255.255.255.0', nextHop: '' });
 
+  // OSPF Network Form State
+  const [newOspfNet, setNewOspfNet] = useState({ network: '', wildcard: '0.0.0.255', areaId: 0 });
+
+  // ACL Rule Form State
+  const [newAclRule, setNewAclRule] = useState({
+    aclId: 100,
+    action: 'permit' as 'permit' | 'deny',
+    protocol: 'ip' as 'ip' | 'icmp' | 'tcp' | 'udp',
+    src: 'any',
+    srcWildcard: '0.0.0.0',
+    dst: 'any',
+    dstWildcard: '0.0.0.0',
+    dstPort: ''
+  });
+
+  // DHCP Form State
+  const [dhcpForm, setDhcpForm] = useState({
+    name: (device as any).dhcpPool?.name || 'LAN_POOL',
+    network: (device as any).dhcpPool?.network || '',
+    mask: (device as any).dhcpPool?.mask || '255.255.255.0',
+    defaultRouter: (device as any).dhcpPool?.defaultRouter || '',
+    dnsServer: (device as any).dhcpPool?.dnsServer || '8.8.8.8'
+  });
+
   const port = device.ports[selectedPort];
 
   const handleTogglePortPower = () => {
@@ -47,6 +71,97 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
       ...d,
       routes: currentRoutes.filter((_: any, i: number) => i !== idx)
     }));
+  };
+
+  const handleAddOspfNetwork = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOspfNet.network) return;
+    const currentOspf = (device as any).ospf || { processId: 1, networks: [] };
+    const currentNets = currentOspf.networks || [];
+    updateDevice(device.id, (d) => ({
+      ...d,
+      ospf: {
+        ...currentOspf,
+        processId: currentOspf.processId || 1,
+        networks: [...currentNets, { ...newOspfNet }]
+      }
+    }));
+    setNewOspfNet({ network: '', wildcard: '0.0.0.255', areaId: 0 });
+  };
+
+  const handleRemoveOspfNetwork = (idx: number) => {
+    const currentOspf = (device as any).ospf || { processId: 1, networks: [] };
+    const currentNets = currentOspf.networks || [];
+    updateDevice(device.id, (d) => ({
+      ...d,
+      ospf: {
+        ...currentOspf,
+        networks: currentNets.filter((_: any, i: number) => i !== idx)
+      }
+    }));
+  };
+
+  const handleAddAclRule = (e: React.FormEvent) => {
+    e.preventDefault();
+    const currentAcls: any[] = (device as any).acls ? [...(device as any).acls] : [];
+    let targetAcl = currentAcls.find(a => Number(a.id) === Number(newAclRule.aclId));
+    if (!targetAcl) {
+      targetAcl = {
+        id: Number(newAclRule.aclId),
+        type: Number(newAclRule.aclId) < 100 ? 'standard' : 'extended',
+        rules: []
+      };
+      currentAcls.push(targetAcl);
+    }
+    const ruleObj: any = {
+      id: `${targetAcl.id}-${targetAcl.rules.length + 1}`,
+      action: newAclRule.action,
+      protocol: newAclRule.protocol,
+      src: newAclRule.src,
+      srcWildcard: newAclRule.src === 'any' ? '255.255.255.255' : newAclRule.srcWildcard,
+      dst: newAclRule.dst,
+      dstWildcard: newAclRule.dst === 'any' ? '255.255.255.255' : newAclRule.dstWildcard,
+      hits: 0
+    };
+    if (newAclRule.dstPort) {
+      ruleObj.dstPort = parseInt(newAclRule.dstPort, 10);
+    }
+    targetAcl.rules.push(ruleObj);
+
+    updateDevice(device.id, (d) => ({
+      ...d,
+      acls: currentAcls
+    }));
+  };
+
+  const handleRemoveAclRule = (aclId: any, ruleIdx: number) => {
+    const currentAcls: any[] = (device as any).acls ? JSON.parse(JSON.stringify((device as any).acls)) : [];
+    const targetAcl = currentAcls.find(a => Number(a.id) === Number(aclId));
+    if (targetAcl) {
+      targetAcl.rules.splice(ruleIdx, 1);
+      const filteredAcls = currentAcls.filter(a => a.rules.length > 0);
+      updateDevice(device.id, (d) => ({
+        ...d,
+        acls: filteredAcls
+      }));
+    }
+  };
+
+  const handleSaveDhcpPool = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dhcpForm.network) return;
+    updateDevice(device.id, (d) => ({
+      ...d,
+      dhcpPool: { ...dhcpForm }
+    }));
+  };
+
+  const handleClearDhcpPool = () => {
+    updateDevice(device.id, (d) => {
+      const copy = { ...d };
+      delete (copy as any).dhcpPool;
+      return copy;
+    });
   };
 
   return (
@@ -340,12 +455,49 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
                 </div>
 
                 {((device as any).ospf?.processId) && (
-                  <div className="space-y-2 pt-2">
+                  <div className="space-y-3 pt-2">
+                    <form onSubmit={handleAddOspfNetwork} className="flex flex-wrap gap-2">
+                      <input
+                        type="text"
+                        placeholder="Network (e.g. 192.168.10.0)"
+                        value={newOspfNet.network}
+                        onChange={(e) => setNewOspfNet({ ...newOspfNet, network: e.target.value })}
+                        className="flex-1 min-w-[140px] px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-300"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Wildcard (e.g. 0.0.0.255)"
+                        value={newOspfNet.wildcard}
+                        onChange={(e) => setNewOspfNet({ ...newOspfNet, wildcard: e.target.value })}
+                        className="w-32 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-300"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Area (e.g. 0)"
+                        value={newOspfNet.areaId}
+                        onChange={(e) => setNewOspfNet({ ...newOspfNet, areaId: parseInt(e.target.value, 10) || 0 })}
+                        className="w-20 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-300"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+                      >
+                        + เพิ่ม Network
+                      </button>
+                    </form>
+
                     <div className="text-xs text-slate-300">OSPF Area Networks:</div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 max-h-36 overflow-y-auto">
                       {((device as any).ospf?.networks || []).map((n: any, idx: number) => (
-                        <div key={idx} className="p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400">
-                          network {n.network} {n.wildcard} area {n.areaId ?? n.area ?? 0}
+                        <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400">
+                          <span>network {n.network} {n.wildcard} area {n.areaId ?? n.area ?? 0}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOspfNetwork(idx)}
+                            className="text-rose-400 hover:text-rose-300 text-[11px] font-sans"
+                          >
+                            ลบ
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -384,10 +536,91 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
                 </p>
               </div>
 
-              {/* ACL Rules List */}
+              {/* ACL Rules List & Creator Form */}
               <div className="border border-slate-800 rounded-2xl bg-slate-900/60 p-4 space-y-3">
-                <div className="font-bold text-sm text-amber-300">Access Control Lists (ACL)</div>
-                <div className="space-y-2">
+                <div className="font-bold text-sm text-amber-300">Access Control Lists (ACL) Form</div>
+                <form onSubmit={handleAddAclRule} className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">ACL ID</label>
+                    <input
+                      type="number"
+                      value={newAclRule.aclId}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, aclId: parseInt(e.target.value, 10) || 100 })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-amber-300 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Action</label>
+                    <select
+                      value={newAclRule.action}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, action: e.target.value as any })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                    >
+                      <option value="permit">PERMIT</option>
+                      <option value="deny">DENY</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Protocol</label>
+                    <select
+                      value={newAclRule.protocol}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, protocol: e.target.value as any })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200"
+                    >
+                      <option value="ip">IP (Any Layer 3)</option>
+                      <option value="icmp">ICMP (Ping)</option>
+                      <option value="tcp">TCP (HTTP/HTTPS)</option>
+                      <option value="udp">UDP (DNS/DHCP)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Destination Port</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 80"
+                      value={newAclRule.dstPort}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, dstPort: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Source IP / any</label>
+                    <input
+                      type="text"
+                      value={newAclRule.src}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, src: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Source Wildcard</label>
+                    <input
+                      type="text"
+                      value={newAclRule.srcWildcard}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, srcWildcard: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 block mb-0.5">Destination IP / any</label>
+                    <input
+                      type="text"
+                      value={newAclRule.dst}
+                      onChange={(e) => setNewAclRule({ ...newAclRule, dst: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      className="w-full py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                    >
+                      + เพิ่มกฎ ACL
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {((device as any).acls || []).map((acl: any) => (
                     <div key={acl.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
                       <div className="font-bold text-xs font-mono text-amber-300">
@@ -395,15 +628,24 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
                       </div>
                       <div className="space-y-1 text-xs font-mono text-slate-300">
                         {(acl.rules || []).map((r: any, rIdx: number) => (
-                          <div key={rIdx} className="pl-2 border-l border-slate-800">
-                            {r.action.toUpperCase()} {r.protocol.toUpperCase()} {r.src} {r.srcWildcard} ➔ {r.dst} {r.dstWildcard} {r.dstPort ? `eq ${r.dstPort}` : ''}
+                          <div key={rIdx} className="flex items-center justify-between pl-2 border-l border-slate-800">
+                            <span>
+                              {r.action.toUpperCase()} {r.protocol.toUpperCase()} {r.src} {r.srcWildcard} ➔ {r.dst} {r.dstWildcard} {r.dstPort ? `eq ${r.dstPort}` : ''}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAclRule(acl.id, rIdx)}
+                              className="text-rose-400 hover:text-rose-300 text-[11px] font-sans ml-2"
+                            >
+                              ลบ
+                            </button>
                           </div>
                         ))}
                       </div>
                     </div>
                   ))}
                   {(!((device as any).acls) || (device as any).acls.length === 0) && (
-                    <div className="text-xs text-slate-500 italic">ยังไม่ได้สร้าง Access Control List (ใช้คำสั่ง CLI access-list)</div>
+                    <div className="text-xs text-slate-500 italic">ยังไม่ได้สร้าง Access Control List (ใช้ฟอร์มด้านบนเพื่อเพิ่มกฎ)</div>
                   )}
                 </div>
               </div>
@@ -446,6 +688,72 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
                     placeholder="cisco / class"
                     className="w-full max-w-sm px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none focus:border-cyan-400"
                   />
+                </div>
+              )}
+
+              {device.type === 'router' && (
+                <div className="border border-slate-800 rounded-2xl bg-slate-900/60 p-4 space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-sm text-sky-300">Cisco IOS DHCP Server Pool</div>
+                    {(device as any).dhcpPool && (
+                      <button
+                        type="button"
+                        onClick={handleClearDhcpPool}
+                        className="text-rose-400 hover:text-rose-300 text-xs font-semibold"
+                      >
+                        ลบ DHCP Pool
+                      </button>
+                    )}
+                  </div>
+                  <form onSubmit={handleSaveDhcpPool} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-0.5">Pool Name</label>
+                      <input
+                        type="text"
+                        value={dhcpForm.name}
+                        onChange={(e) => setDhcpForm({ ...dhcpForm, name: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-0.5">Network Address</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 192.168.1.0"
+                        value={dhcpForm.network}
+                        onChange={(e) => setDhcpForm({ ...dhcpForm, network: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-0.5">Subnet Mask</label>
+                      <input
+                        type="text"
+                        placeholder="255.255.255.0"
+                        value={dhcpForm.mask}
+                        onChange={(e) => setDhcpForm({ ...dhcpForm, mask: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] text-slate-400 block mb-0.5">Default Router (Gateway)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 192.168.1.1"
+                        value={dhcpForm.defaultRouter}
+                        onChange={(e) => setDhcpForm({ ...dhcpForm, defaultRouter: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 font-mono"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end pt-1">
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs"
+                      >
+                        บันทึก DHCP Server Pool
+                      </button>
+                    </div>
+                  </form>
                 </div>
               )}
             </div>

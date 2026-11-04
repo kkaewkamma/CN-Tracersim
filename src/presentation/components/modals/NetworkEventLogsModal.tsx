@@ -155,3 +155,4 @@ export const NetworkEventLogsModal: React.FC<EventLogsModalProps> = ({ onClose }
     </div>
   );
 };
+

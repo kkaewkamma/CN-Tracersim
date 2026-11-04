@@ -4,7 +4,9 @@ import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
 import { useEventLogStore } from '@application/stores/useEventLogStore';
 import { PacketTracer } from '@core/engine/packet-tracer';
-import { Router, Server, Laptop, Cloud, Terminal } from 'lucide-react';
+import { Router, Server, Laptop, Cloud, Terminal, Target } from 'lucide-react';
+import { useAcademyStore } from '@application/stores/useAcademyStore';
+import { PRACTICAL_LABS_CATALOG } from '@core/curriculum/syllabus-data';
 
 interface NodeRendererProps {
   device: NetworkDevice;
@@ -23,6 +25,22 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
   const isCableSrc = cableSource?.deviceId === device.id;
   const isPduSrc = packetSource?.deviceId === device.id;
   const isDeleteMode = currentTool === 'delete';
+
+  // Check if device is current NetAcad practice target
+  const { activePracticalLabId } = useAcademyStore();
+  const currentLab = PRACTICAL_LABS_CATALOG.find(l => l.id === activePracticalLabId);
+  const isLabTarget = !!currentLab && (
+    (currentLab.commands?.some(cmd => cmd.toLowerCase().startsWith(device.name.toLowerCase()))) ||
+    (currentLab.procedure?.some(p => p.toLowerCase().includes(device.name.toLowerCase())))
+  );
+
+  // Capability badges
+  const hasAcl = device.type === 'router' && Array.isArray((device as any).acls) && (device as any).acls.length > 0;
+  const hasNat = (device as any).natEnabled || Object.values(device.ports).some((p: any) => p.nat);
+  const hasOspf = (device as any).ospf?.processId != null;
+  const hasTrunk = device.type === 'switch' && Object.values(device.ports).some((p) => p.mode === 'trunk');
+  const hasDhcp = (device as any).dhcpPool != null || (device as any).dhcpEnabled === true;
+  const hasGateway = (device.type === 'pc' || device.type === 'server') && !!device.gateway;
 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ startX: number; startY: number; devX: number; devY: number }>({
@@ -55,6 +73,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
     if (isCableSrc) return 'border-amber-400 shadow-amber-500/30 ring-2 ring-amber-400 animate-pulse';
     if (isPduSrc) return 'border-emerald-400 shadow-emerald-500/40 ring-2 ring-emerald-400 animate-pulse';
     if (isSelected) return 'border-cyan-400 shadow-cyan-500/40 ring-2 ring-cyan-400';
+    if (isLabTarget) return 'border-amber-400/90 shadow-amber-500/30 ring-2 ring-amber-400/50';
     return 'border-slate-700 hover:border-slate-500';
   };
 
@@ -174,6 +193,14 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
+      {/* NetAcad Active Step Target Beacon */}
+      {isLabTarget && (
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[9px] shadow-lg flex items-center gap-1 animate-bounce whitespace-nowrap z-20 pointer-events-none">
+          <Target size={11} className="text-slate-950" />
+          <span>เป้าหมาย Lab</span>
+        </div>
+      )}
+
       <div 
         className={`w-16 h-16 rounded-2xl bg-slate-900/90 border-2 ${getBorderColor()} shadow-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:scale-105 backdrop-blur`}
       >
@@ -191,6 +218,40 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
           </span>
         </div>
       )}
+
+      {/* Capability Badges Row */}
+      <div className="mt-1 flex flex-wrap items-center justify-center gap-0.5 max-w-[90px] mx-auto pointer-events-none">
+        {hasAcl && (
+          <span className="px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[8px] font-mono font-bold">
+            ACL
+          </span>
+        )}
+        {hasNat && (
+          <span className="px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[8px] font-mono font-bold">
+            NAT
+          </span>
+        )}
+        {hasOspf && (
+          <span className="px-1 py-0.2 rounded bg-teal-500/20 text-teal-300 border border-teal-500/40 text-[8px] font-mono font-bold">
+            OSPF
+          </span>
+        )}
+        {hasTrunk && (
+          <span className="px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[8px] font-mono font-bold">
+            TRUNK
+          </span>
+        )}
+        {hasDhcp && (
+          <span className="px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[8px] font-mono font-bold">
+            DHCP
+          </span>
+        )}
+        {hasGateway && (
+          <span className="px-1 py-0.2 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 text-[8px] font-mono font-bold">
+            GW
+          </span>
+        )}
+      </div>
 
       {/* CLI Quick Action Pill */}
       {isSelected && (

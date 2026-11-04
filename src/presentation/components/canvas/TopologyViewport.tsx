@@ -3,6 +3,7 @@ import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { useSessionStore } from '@application/stores/useSessionStore';
 import { CableLayer } from './CableLayer';
 import { NodeRenderer } from './NodeRenderer';
+import { PduFlightOverlay, PduHopPosition } from './PduFlightOverlay';
 import { NetworkDevice } from '@core/types';
 import { 
   MousePointer, Cable, Trash2, ZoomIn, ZoomOut, RotateCcw, 
@@ -32,6 +33,37 @@ export const TopologyViewport: React.FC = () => {
 
   // State for Port Selection Dialog
   const [portSelectDevice, setPortSelectDevice] = useState<NetworkDevice | null>(null);
+
+  // Multi-Touch Distance Reference for Pinch-to-Zoom
+  const touchDistRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchDistRef.current = dist;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && touchDistRef.current !== null) {
+      const newDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const factor = newDist / touchDistRef.current;
+      if (Math.abs(factor - 1) > 0.02) {
+        setZoom((prev) => Math.max(0.5, Math.min(1.6, Math.round(prev * factor * 10) / 10)));
+        touchDistRef.current = newDist;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchDistRef.current = null;
+  };
 
   useEffect(() => {
     setActiveHopIndex(0);
@@ -117,6 +149,21 @@ export const TopologyViewport: React.FC = () => {
   const currentHop = lastSimulationResult?.hops[activeHopIndex];
   const activeHopDevice = currentHop ? devices.find(d => d.name === currentHop.device) : null;
 
+  // Map simulation hops to canvas coordinates for animated PDU flight
+  const pduHopPositions: PduHopPosition[] = (lastSimulationResult?.hops || [])
+    .map((hop, idx) => {
+      const dev = devices.find((d) => d.name === hop.device || d.id === hop.device);
+      return {
+        index: idx,
+        deviceName: hop.device,
+        x: dev ? dev.x : 0,
+        y: dev ? dev.y : 0,
+        action: hop.action,
+        layer: hop.layer
+      };
+    })
+    .filter((h) => h.x !== 0 || h.y !== 0);
+
   return (
     <div 
       className="flex-1 relative w-full h-full bg-[#080d15] overflow-hidden select-none cursor-default"
@@ -125,6 +172,9 @@ export const TopologyViewport: React.FC = () => {
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       onWheel={handleWheel}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Background Subtle Grid Pattern */}
       <div 
@@ -172,6 +222,21 @@ export const TopologyViewport: React.FC = () => {
             />
           ))}
         </div>
+
+        {/* Animated Flying PDU Packet Layer */}
+        {lastSimulationResult && pduHopPositions.length > 0 && (
+          <PduFlightOverlay
+            hops={pduHopPositions}
+            isSuccess={lastSimulationResult.success}
+            protocol={packetSource?.protocol || (lastSimulationResult.reason.toLowerCase().includes('http') ? 'tcp' : 'icmp')}
+            simMode={simMode}
+            activeHopIndex={activeHopIndex}
+            onInspect={(idx) => {
+              setActiveHopIndex(idx);
+              openModal('inspect_pdu');
+            }}
+          />
+        )}
       </div>
 
       {/* Empty State Banner if no devices */}
