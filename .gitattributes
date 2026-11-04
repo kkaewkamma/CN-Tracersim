@@ -1,0 +1,6 @@
+# GitHub Linguist Overrides
+# Ensures GitHub Language Statistics show modern TypeScript as primary language
+legacy/** linguist-vendored
+legacy/** linguist-generated
+public/** linguist-vendored
+tests/** linguist-vendored

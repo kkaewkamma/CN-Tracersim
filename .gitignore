@@ -3,8 +3,10 @@ node_modules/
 .pnp
 .pnp.js
 
-# Build Outputs (Leave dist if intentionally tracked for GitHub Pages or static hosting)
-# dist/
+# Build Outputs (Never commit compiled bundles to source control)
+dist/
+dist-ssr/
+*.local
 
 # Testing & Coverage
 coverage/
