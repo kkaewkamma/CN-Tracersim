@@ -1,73 +1,34 @@
-# NetSim Touch v4.0 Ultimate (CN-Tracersim) 🌐📱🚀
+# NetSim Touch v5.0 Academy Edition (CN-Tracersim) 🎓🌐📱🚀
 
-**NetSim Touch v4.0 Ultimate** คือระบบจำลองเครือข่ายระดับ **CCNA Enterprise** และฝึกคำสั่ง **Cisco IOS CLI** สไตล์ Packet Tracer ที่ออกแบบมาเพื่อการสัมผัสบน **iPad / แท็บเล็ต** และเดสก์ท็อป รองรับการติดตั้งเป็น **Progressive Web App (PWA)** แบบเต็มจอและทำงานออฟไลน์ได้ 100%
-
----
-
-## 🔥 ฟีเจอร์ระดับโปรใน v4.0 Ultimate
-
-1. **🔍 OSI 7-Layer Packet PDU Inspector & Step-by-Step Mode**
-   - สลับโหมดการส่งแพ็กเก็ตระหว่าง **⚡ Realtime** และ **🐾 Step-by-Step** (กดเดินแพ็กเก็ตทีละ Hop)
-   - เปิดหน้าต่าง **OSI 7-Layer PDU Inspector** เพื่อดูการห่อหุ้มข้อมูล (Encapsulation) ตั้งแต่ Layer 1 (Physical Port), Layer 2 (Src/Dst MAC Address & **802.1Q VLAN Tag**), Layer 3 (Src/Dst IP, **NAT IP Translation** & **ค่า TTL ที่ลดลงทุกครั้งที่ผ่าน Router**), ไปจนถึง Layer 4–7 (ICMP Echo หรือ **TCP Port 80 HTTP GET**)
-2. **🛡️ Extended ACL Firewall & NAT/PAT Overload + ISP Cloud**
-   - สร้างกฎไฟร์วอลล์ **Access Control Lists (ACL)** บน Router เช่น บล็อก `ICMP Ping` แต่เปิดให้ `TCP Port 80 (HTTP)` ผ่านได้ (`access-list 100 deny icmp any any`, `access-list 100 permit ip any any`)
-   - รองรับ **NAT Overload (PAT)** แปลง Private IP (`192.168.x.x`) เป็น Public IP (`203.0.113.x`) อัตโนมัติเมื่อวิ่งผ่านพอร์ต `ip nat inside` ออกสู่ `ip nat outside` พร้อมดูตาราง `show ip nat translations`
-   - เพิ่มอุปกรณ์ **`+ ISP Cloud`** สำหรับจำลองโครงข่ายอินเทอร์เน็ตภายนอก
-3. **🌐 Layer 7 HTTP Web Client / Server Simulation (TCP Port 80)**
-   - เครื่องมือ **🌐 เว็บ HTTP** บนแถบด้านบน และคำสั่ง `http <ip>` ใน CLI เพื่อจำลองการส่ง **TCP SYN ➔ HTTP GET :80 ➔ 200 OK**
-   - พิสูจน์การทำงานของ Extended ACL ได้ชัดเจน (เช่น บล็อก Ping แต่เข้าเว็บ Server ผ่านพอร์ต 80 ได้สำเร็จ)
-4. **🟣 802.1Q VLAN Trunking & Router-on-a-Stick (Inter-VLAN Routing)**
-   - ตั้งค่าพอร์ต Switch เป็น `switchport mode access` หรือ `switchport mode trunk` (แสดงป้าย `802.1Q TRUNK` บนสายแลน)
-   - สร้าง Sub-interface บน Router เช่น `interface Gig0/0.10` พร้อมคำสั่ง `encapsulation dot1Q 10` เพื่อให้เครื่องต่าง VLAN คุยข้ามหากันได้ผ่านสายเส้นเดียว
-5. **⚡ OSPF Dynamic Routing (`router ospf`) & Multi-Hop Static Routing (`ip route`)**
-   - รองรับการประกาศวงแลนด้วย `router ospf 1` ➔ `network <ip> <wildcard> area 0`
-   - คำนวณตาราง Routing อัตโนมัติ (Administrative Distance: Connected `0`, Static `1`, OSPF `110` พร้อม Longest Prefix Match)
-6. **🎓 ระบบตรวจให้คะแนนอัตโนมัติ (PKA Auto-Grader `0% – 100%`)**
-   - ปุ่ม **`🎓 Score: 100%`** บนแถบเมนู ตรวจสอบความสำเร็จของแล็บแต่ละข้อแบบเรียลไทม์ พร้อมกดคัดลอกใบรายงานผลส่งอาจารย์ได้ทันที
-7. **🔎 Infinite Canvas Pan & Zoom (`50% – 150%`)**
-   - ปุ่มซูมเข้า/ออก/รีเซ็ตมุมมอง มุมขวาล่าง และลากพื้นที่ว่างบนกระดานเพื่อเลื่อนดูผังเครือข่ายขนาดใหญ่ได้อย่างอิสระ
-8. **📚 โจทย์แล็บมาตรฐาน CCNA 7 ระดับ (7 Curated Labs)**
-   - **Lab 01:** Basic Switch LAN & MAC Table (`192.168.1.0/24`)
-   - **Lab 02:** Inter-Subnet Router Gateway (`192.168.10.0/24` ⟷ `192.168.20.0/24`)
-   - **Lab 03:** Multi-Router WAN & Static Routing (`R1-HQ` ⟷ `R2-Branch`)
-   - **Lab 04:** Troubleshooting Challenge (ภารกิจซ่อมระบบล่ม 3 จุด พร้อมตรวจคะแนนอัตโนมัติ)
-   - **Lab 05:** VLAN Trunking & Router-on-a-Stick (`802.1Q` Sub-interfaces `Gig0/0.10` & `.20`)
-   - **Lab 06:** Enterprise OSPF Area 0 Dynamic Routing (`router ospf 1`)
-   - **Lab 07:** Firewall ACL, NAT Overload & ISP Cloud (บล็อก ICMP Ping แต่เปิด HTTP Port 80 พร้อมทำ NAT ออกสู่อินเทอร์เน็ต)
+**NetSim Touch v5.0 Academy Edition** คือเว็บแอปพลิเคชันจำลองเครือข่ายและฝึกพิมพ์คำสั่ง **Cisco IOS CLI** สไตล์ **Cisco Packet Tracer** พร้อม **ระบบผู้ช่วยฝึกสอนทีละขั้น (Interactive CLI Coach)** และสรุปเนื้อหาทฤษฎีครบทั้ง **13 บทเรียนตามตารางสอนวิชา Computer Networks** รองรับการใช้งานทั้งบน **iPad / แท็บเล็ต** และคอมพิวเตอร์เดสก์ท็อป (PWA Offline 100%)
 
 ---
 
-## 💻 ตารางคำสั่ง Cisco IOS CLI ทั้งหมดที่รองรับ
+## 🎓 จุดเด่นใน v5.0 Academy Edition
 
-| โหมด | คำสั่ง | คำอธิบาย |
-| :--- | :--- | :--- |
-| **User (`>`)** | `enable` / `en` | เข้าสู่โหมด Privileged Exec (`#`) |
-| **Privileged (`#`)** | `configure terminal` / `conf t` | เข้าสู่โหมด Global Configuration (`(config)#`) |
-| | `show ip interface brief` | แสดงตารางพอร์ต, IP Address/VLAN/Trunk และสถานะ Up/Down |
-| | `show ip route` | แสดงตาราง Routing (`C` Connected, `L` Local, `S` Static, `O` OSPF) |
-| | `show ip ospf neighbor` | แสดงตารางเพื่อนบ้าน OSPF (`FULL/DR`) |
-| | `show access-lists` | แสดงกฎไฟร์วอลล์ ACL และจำนวนแพ็กเก็ตที่ตรงเงื่อนไข (`matches`) |
-| | `show ip nat translations` | แสดงตารางแปลงที่อยู่ IP (Inside Local ➔ Inside Global) |
-| | `show ip arp` | แสดงตาราง ARP (IP คู่กับ MAC Address) |
-| | `show vlan brief` | แสดงตาราง VLAN และพอร์ตสมาชิกบน Switch |
-| | `show interfaces trunk` | แสดงพอร์ตที่เปิดใช้งาน 802.1Q Trunk บน Switch |
-| | `show mac address-table` | แสดงตาราง MAC Address ที่ Switch เรียนรู้จากสายที่เสียบอยู่ |
-| | `show running-config` / `sh run` | แสดงการตั้งค่าทั้งหมดของอุปกรณ์ |
-| | `ping <ip>` / `traceroute <ip>` | ทดสอบส่ง ICMP Echo หรือไล่เส้นทางทีละ Router Hop |
-| | `http <ip>` | ทดสอบเปิดหน้าเว็บผ่าน TCP Port 80 (HTTP GET) |
-| | `write` / `wr` | บันทึกการตั้งค่าลงหน่วยความจำ (`localStorage`) |
-| **Global Config (`(config)#`)** | `hostname <name>` | เปลี่ยนชื่ออุปกรณ์ |
-| | `interface <port \| port.vlan>` | เข้าไปตั้งค่าพอร์ตหลัก หรือสร้าง Sub-interface เช่น `int Gig0/0.10` |
-| | `router ospf <process-id>` | เข้าสู่โหมดตั้งค่า OSPF (`(config-router)#`) |
-| | `access-list 100 <permit\|deny> <icmp\|tcp\|ip> <src> <dst>` | สร้างกฎ Extended ACL บน Router |
-| | `ip nat inside source list 1 overload` | เปิดใช้งาน NAT Overload (PAT) บน Router |
-| | `ip route <net> <mask> <next-hop>` | เพิ่มเส้นทาง Static Route บน Router |
-| | `ip default-gateway <ip>` | ตั้งค่า Default Gateway |
-| **Router OSPF (`(config-router)#`)** | `network <ip> <wildcard> area <id>` | ประกาศวงแลนเข้าสู่ OSPF เช่น `network 192.168.10.0 0.0.0.255 area 0` |
-| **Interface (`(config-if)#`)** | `ip address <ip> <mask>` | กำหนด IPv4 Address และ Subnet Mask |
-| | `ip address dhcp` | ขอรับ IPv4 และ Default Gateway อัตโนมัติผ่าน DHCP |
-| | `ip nat inside` / `ip nat outside` | กำหนดฝั่งพอร์ตภายใน/ภายนอกสำหรับทำ NAT Overload |
-| | `encapsulation dot1Q <vlan-id>` | กำหนดหมายเลข 802.1Q VLAN Tag บน Sub-interface ของ Router |
-| | `switchport mode <access\|trunk>` | ตั้งค่าพอร์ต Switch เป็น Access หรือ 802.1Q Trunk |
-| | `switchport access vlan <1-4094>` | กำหนด Access VLAN ให้พอร์ตบน Switch |
-| | `no shutdown` / `shutdown` | เปิด (`Up`) หรือปิด (`Administratively Down`) พอร์ต |
+1. **📚 คอร์สเรียนวิชา Computer Networks ครบ 13 บทตาม Syllabus (`js/academy-tutor.js`)**
+   - **บทที่ 01 — Network Layer:** โครงสร้าง IPv4 Packet, ค่า TTL, การทำงานของ ICMP `ping` และ `traceroute`
+   - **บทที่ 02 — Address Resolution (ARP):** กลไก ARP Request (`Broadcast FFFF.FFFF.FFFF`), ARP Reply (`Unicast`) และตาราง `show ip arp` / `arp -a`
+   - **บทที่ 03 — Transport Layer:** เปรียบเทียบ TCP vs UDP, หมายเลข Port สำคัญ และวิเคราะห์ **TCP 3-Way Handshake (`SYN ➔ SYN-ACK ➔ ACK`)**
+   - **บทที่ 04 — IPv4 Addressing:** การคำนวณ Subnetting, VLSM, CIDR (`/24`–`/30`), สูตรหาจำนวนโฮสต์ ($2^h - 2$)
+   - **บทที่ 05 — IPv6 Addressing:** โครงสร้าง 128-bit Hexadecimal, กฎการย่อ `::`, Global Unicast (`2001:db8::/64`), Link-Local (`FE80::`), SLAAC (`ipv6 address autoconfig`) และ `ipv6 unicast-routing`
+   - **บทที่ 06 — Switches Concepts:** ตาราง MAC Address / CAM Table และกระบวนการ **Learning ➔ Flooding ➔ Forwarding**
+   - **บทที่ 07 — Basic Switch & Device Security Config:** การตั้งค่า `hostname`, `enable secret`, `service password-encryption`, `line vty 0 4`, `transport input ssh` และ Management VLAN (`interface vlan 1`)
+   - **บทที่ 08 — VLANs & Trunking:** การสร้าง `vlan 10` (`name Sales`), พอร์ต Access vs 802.1Q Trunk และการตั้งค่า `switchport trunk native vlan 99`
+   - **บทที่ 09 — Basic Router Configuration:** การตั้งค่าพอร์ต Router (`interface Gig0/1`, `ip address`, `no shutdown`) และ `show ip interface brief`
+   - **บทที่ 10 — Routing Concepts:** Administrative Distance (`Connected=0`, `Static=1`, `OSPF=110`), Longest Prefix Match, Static Route, Default Route (`0.0.0.0 0.0.0.0`) และ OSPF Area 0
+   - **บทที่ 11 — Inter-VLAN Routing:** ครบทั้ง **Router-on-a-Stick** (`interface Gig0/0.10` + `encapsulation dot1Q 10`) และ **Layer 3 Switch SVI** (`ip routing` + `interface vlan 10`)
+   - **บทที่ 12 — Access Control Lists (ACL):** ทั้ง **Standard ACL (1–99)** และ **Extended ACL (100–199)** พร้อมการผูกพอร์ต `ip access-group 100 in`
+   - **บทที่ 13 — Network Address Translation (NAT):** คำศัพท์สอบ Inside Local / Inside Global / Outside Local / Outside Global, การตั้งค่า **Static NAT** (`ip nat inside source static`) และ **PAT Overload** (`overload`)
+
+2. **🎯 โค้ชจับมือฝึกพิมพ์คำสั่งจริงทีละขั้น (Step-by-Step Guided CLI Coach)**
+   - แสดงป้ายชี้เป้า **`🎯 แตะฝึก CLI ขั้นที่ X`** บนตัวอุปกรณ์ที่ต้องตั้งค่าบนกระดาน
+   - แถบผู้ช่วยภายในหน้าต่าง Terminal (`#cliTutorBanner`) แนะนำคำสั่งถัดไปพร้อมอธิบายเหตุผลภาษาไทย และมีปุ่ม **`⚡ พิมพ์และรันให้ดู`** เมื่อต้องการดูตัวอย่าง
+   - ตรวจจับคำสั่งที่พิมพ์ใน CLI อัตโนมัติและเช็คถูก `✅` ทันทีเมื่อทำสำเร็จ
+
+3. **🧮 เครื่องคิดเลข IPv4 Subnetting / VLSM / Binary ในตัว**
+   - คำนวณ **Network Address, Usable Host Range, Broadcast Address, Subnet Mask, Wildcard Mask** และแสดงเลขฐานสอง 32-Bit แบบเรียลไทม์
+
+4. **🔍 OSI 7-Layer Packet PDU Inspector & 🏆 PKA Auto-Grader (`0% – 100%`)**
+   - เจาะลึกแพ็กเก็ตทีละ Hop ตั้งแต่ Layer 1 ถึง Layer 7 (TCP Handshake, HTTP Port 80, ICMP, TTL, NAT IP, 802.1Q Tag, MAC Address)
+   - ระบบตรวจให้คะแนนแล็บอัตโนมัติพร้อมคัดลอกใบรายงานผลส่งอาจารย์
