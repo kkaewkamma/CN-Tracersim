@@ -59,3 +59,4 @@ describe('Core CLI: CiscoCliStateMachine', () => {
     expect(ipRoute.output).toContain('S    192.168.20.0/24 [1/0] via 10.0.0.2');
   });
 });
+

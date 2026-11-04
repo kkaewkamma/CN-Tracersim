@@ -1,4 +1,4 @@
-import { NetworkDevice, NetworkCable, AccessControlList, AclRule } from '../types';
+import { NetworkDevice, AccessControlList, AclRule } from '../types';
 import { IpMath } from './ip-math';
 
 export const AclEngine = {

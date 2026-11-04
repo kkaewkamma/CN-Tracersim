@@ -30,3 +30,4 @@ export const useSessionStore = create<SessionState>((set) => ({
   openModal: (modal, deviceId) => set({ activeModal: modal, modalDeviceId: deviceId || null }),
   closeModal: () => set({ activeModal: 'none', modalDeviceId: null })
 }));
+

@@ -9,7 +9,7 @@ export const DhcpEngine = {
   requestDhcpLease(
     clientDevice: NetworkDevice,
     allDevices: NetworkDevice[],
-    allCables: NetworkCable[]
+    _allCables: NetworkCable[]
   ): DhcpLeaseResult {
     const doraSteps: DhcpDoraStep[] = [];
 
@@ -43,7 +43,6 @@ export const DhcpEngine = {
 
     const netInt = IpMath.ipToInt(pool.network);
     const mask = pool.mask || '255.255.255.0';
-    const maskInt = IpMath.ipToInt(mask);
     const hostBits = 32 - IpMath.maskToCidr(mask);
     const totalHosts = Math.pow(2, hostBits);
 
@@ -88,7 +87,7 @@ export const DhcpEngine = {
       };
     }
 
-    const serverIp = pool.defaultRouter || Object.values(dhcpRouter.ports).find((p: any) => p.ip)?.ip || '192.168.10.1';
+    const serverIp = pool.defaultRouter || (Object.values(dhcpRouter.ports).find((p: any) => p.ip) as any)?.ip || '192.168.10.1';
 
     // 2. DHCP Offer (Server Unicast/Broadcast)
     doraSteps.push({

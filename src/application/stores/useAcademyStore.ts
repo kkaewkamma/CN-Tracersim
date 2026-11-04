@@ -52,3 +52,4 @@ export const useAcademyStore = create<AcademyState>((set) => ({
     learningStages: { ...state.learningStages, [stage]: true }
   }))
 }));
+

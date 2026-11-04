@@ -1,4 +1,4 @@
-import { NetworkDevice, NetworkCable, SwitchDevice } from '../types';
+import { NetworkDevice, NetworkCable } from '../types';
 
 export const L2SwitchingEngine = {
   /**
@@ -68,7 +68,7 @@ export const L2SwitchingEngine = {
   computeStpBlockedPorts(
     allDevices: NetworkDevice[],
     allCables: NetworkCable[],
-    vlanId: number = 1
+    _vlanId: number = 1
   ): Set<string> {
     const blockedPorts = new Set<string>();
     const switches = allDevices.filter(d => d.type === 'switch') as any[];

@@ -32,3 +32,4 @@ export interface CiscoCommandRule {
   allowedModes: CliMode[];
   handler: (match: RegExpMatchArray, context: CliContext, device: any) => { output: string; contextUpdate?: Partial<CliContext>; stateChanged?: boolean };
 }
+

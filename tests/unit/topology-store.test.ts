@@ -29,3 +29,4 @@ describe('Application Layer: Zustand Topology Store', () => {
     expect(useTopologyStore.getState().cables.length).toBe(0);
   });
 });
+

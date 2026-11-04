@@ -1,4 +1,4 @@
-import { CliMode, CliContext, CliExecutionResult, NetworkDevice } from '../types';
+import { CliContext, CliExecutionResult } from '../types';
 import { IpMath } from '../engine/ip-math';
 
 /**
@@ -44,7 +44,6 @@ export class CiscoCliStateMachine {
       return { output: '', prompt: this.getPrompt(), context: this.getContext(), stateChanged: false };
     }
 
-    let stateChanged = false;
     let output = '';
 
     // Handle Help (?)
@@ -97,7 +96,6 @@ export class CiscoCliStateMachine {
       const hostMatch = cmd.match(/^hostname\s+(\S+)/i);
       if (hostMatch) {
         this.device.name = hostMatch[1];
-        stateChanged = true;
         return { output: '', prompt: this.getPrompt(), context: this.getContext(), stateChanged: true };
       }
 
@@ -271,3 +269,4 @@ export class CiscoCliStateMachine {
     }
   }
 }
+

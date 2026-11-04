@@ -1,5 +1,4 @@
-import { NetworkDevice, NatTranslationEntry } from '../types';
-import { IpMath } from './ip-math';
+import { NatTranslationEntry } from '../types';
 import { AclEngine } from './acl-engine';
 
 export const NatEngine = {
@@ -116,7 +115,7 @@ export const NatEngine = {
     egressPort: string,
     dstIp: string,
     dstPort?: number,
-    protocol: 'tcp' | 'udp' | 'icmp' = 'icmp'
+    _protocol: 'tcp' | 'udp' | 'icmp' = 'icmp'
   ): { unTranslated: boolean; originalIp: string; originalPort?: number } {
     if (!router.natTranslations || router.natTranslations.length === 0) {
       return { unTranslated: false, originalIp: dstIp, originalPort: dstPort };

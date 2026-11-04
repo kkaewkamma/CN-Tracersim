@@ -3,7 +3,7 @@ import { AclEngine } from '../../src/core/engine/acl-engine';
 import { NatEngine } from '../../src/core/engine/nat-engine';
 import { OspfEngine } from '../../src/core/engine/ospf-engine';
 import { DhcpEngine } from '../../src/core/engine/dhcp-engine';
-import { AccessControlList, NetworkDevice } from '../../src/core/types';
+import { AccessControlList } from '../../src/core/types';
 
 describe('Core Engine: ACL, NAT, OSPF & DHCP Protocols', () => {
   // 1. ACL Engine Tests

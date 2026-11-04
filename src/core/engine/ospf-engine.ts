@@ -1,4 +1,4 @@
-import { NetworkDevice, NetworkCable, RouterDevice } from '../types';
+import { NetworkDevice, NetworkCable } from '../types';
 import { IpMath } from './ip-math';
 
 export const OspfEngine = {
