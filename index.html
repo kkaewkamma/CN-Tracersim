@@ -521,12 +521,12 @@
         </div>
     </div>
 
-    <!-- PKA AUTO-GRADER & ASSESSMENT REPORT MODAL -->
+    <!-- PKA AUTO-GRADER & LAB EDITOR MODAL -->
     <div id="graderModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between pb-3 border-b border-slate-700">
                 <div>
-                    <h3 class="font-bold text-base text-white">🏆 ระบบตรวจคะแนนแล็บอัตโนมัติ (PKA Assessment Grader)</h3>
+                    <h3 class="font-bold text-base text-white">🏆 ระบบตรวจคะแนนแล็บอัตโนมัติ & Lab Editor (PKA Grader)</h3>
                     <p id="graderLabTitle" class="text-xs text-cyan-400 font-mono mt-0.5">Lab Assessment</p>
                 </div>
                 <div class="flex items-center gap-3">
@@ -534,9 +534,35 @@
                     <button onclick="ModalController.closeGraderModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
                 </div>
             </div>
-            <div id="graderChecklist" class="space-y-2 max-h-64 overflow-y-auto"></div>
-            <div class="flex items-center justify-between pt-3 border-t border-slate-700">
-                <button onclick="ModalController.copyGradeReport()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold shadow">📋 คัดลอกใบรายงานผลคะแนนส่งอาจารย์</button>
+            <div id="graderChecklist" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+            <!-- Custom Lab Objective Builder -->
+            <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-amber-300">🛠️ Lab Editor: สร้างโจทย์และเงื่อนไขตรวจคะแนนเอง (Custom Grader Rules)</span>
+                    <button onclick="ModalController.clearCustomGraderRules()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold">ล้างเงื่อนไขที่สร้างเอง</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input id="customLabTitleInput" type="text" placeholder="ชื่อโจทย์แล็บ (เช่น Quiz 1: OSPF)" onchange="ModalController.saveCustomLabTitle(this.value)" class="sm:col-span-4 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-400">
+                    <select id="customRuleType" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-cyan-300">
+                        <option value="ping_pass">Ping สำเร็จ (ICMP)</option>
+                        <option value="http_pass">HTTP Port 80 สำเร็จ</option>
+                        <option value="ping_block">ACL บล็อก Ping</option>
+                        <option value="ospf_neighbor">มี OSPF Neighbor FULL</option>
+                        <option value="nat_active">เปิดใช้งาน NAT/PAT</option>
+                        <option value="trunk_active">ตั้งพอร์ต 802.1Q Trunk</option>
+                    </select>
+                    <select id="customRuleSrc" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"></select>
+                    <select id="customRuleDst" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"></select>
+                    <button onclick="ModalController.addCustomGraderRule()" class="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow">+ เพิ่มเงื่อนไข</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-700">
+                <div class="flex gap-2">
+                    <button onclick="ModalController.copyGradeReport()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold shadow">📋 คัดลอกผลคะแนน</button>
+                    <button onclick="ModalController.closeGraderModal(); ModalController.openLabModal();" class="px-3.5 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold">💾 บันทึก/ส่งออกโจทย์ Lab</button>
+                </div>
                 <button onclick="ModalController.closeGraderModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">ปิดหน้าต่าง</button>
             </div>
         </div>

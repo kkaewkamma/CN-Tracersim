@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netsim-touch-v5.0-academy';
+const CACHE_NAME = 'netsim-touch-v5.1-core';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,6 +34,21 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request).catch(() => caches.match('./index.html')))
+    caches.match(e.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(e.request)
+        .then((networkResponse) => {
+          if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match('./index.html'));
+    })
   );
 });

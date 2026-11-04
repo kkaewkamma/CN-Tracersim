@@ -22,6 +22,11 @@ class CiscoCLI {
         if (!this.device.natTranslations) this.device.natTranslations = [];
         if (!this.device.vlans) this.device.vlans = { 1: 'default' };
         if (!this.device.ospf) this.device.ospf = { processId: null, networks: [] };
+        if (!this.device.dhcpPools) this.device.dhcpPools = [];
+        if (!this.device.dhcpExcluded) this.device.dhcpExcluded = [];
+        if (!this.device.dhcpBindings) this.device.dhcpBindings = [];
+        if (!this.device.arpCache) this.device.arpCache = {};
+        if (!this.device.macTable) this.device.macTable = [];
         if (!this.device.cmdHistory) this.device.cmdHistory = [];
         this.historyCursor = this.device.cmdHistory.length;
         this.onStateChange = onStateChange;
@@ -39,6 +44,7 @@ class CiscoCLI {
             case 'config-vlan': return `${name}(config-vlan)#`;
             case 'config-line': return `${name}(config-line)#`;
             case 'config-router': return `${name}(config-router)#`;
+            case 'config-dhcp': return `${name}(dhcp-config)#`;
             case 'user':
             default: return `${name}>`;
         }
@@ -182,6 +188,15 @@ class CiscoCLI {
             return [
                 { label: 'network ... area 0', cmd: 'network 192.168.10.0 0.0.0.255 area 0', run: false },
                 { label: 'net 10.0.0.0 0.0.0.3 area 0', cmd: 'network 10.0.0.0 0.0.0.3 area 0', run: true },
+                { label: 'router-id ...', cmd: 'router-id 1.1.1.1', run: false },
+                { label: 'exit', cmd: 'exit', run: true },
+                { label: 'end', cmd: 'end', run: true }
+            ];
+        } else if (mode === 'config-dhcp') {
+            return [
+                { label: 'network ...', cmd: 'network 192.168.10.0 255.255.255.0', run: false },
+                { label: 'default-router ...', cmd: 'default-router 192.168.10.1', run: false },
+                { label: 'dns-server 8.8.8.8', cmd: 'dns-server 8.8.8.8', run: true },
                 { label: 'exit', cmd: 'exit', run: true },
                 { label: 'end', cmd: 'end', run: true }
             ];
@@ -200,27 +215,30 @@ class CiscoCLI {
             ],
             'privileged': [
                 'configure terminal', 'show ip interface brief', 'show ipv6 interface brief', 'show ip route', 'show access-lists',
-                'show ip nat translations', 'show ip ospf neighbor', 'show ip arp', 'show running-config',
-                'show vlan brief', 'show interfaces trunk', 'show mac address-table', 'ping ', 'http ',
-                'traceroute ', 'clear arp-cache', 'write', 'disable', 'clear', 'exit'
+                'show ip nat translations', 'show ip ospf neighbor', 'show ip arp', 'show ip dhcp binding', 'show ip dhcp pool',
+                'show running-config', 'show vlan brief', 'show interfaces trunk', 'show mac address-table', 'ping ', 'http ',
+                'traceroute ', 'clear arp-cache', 'clear ip nat translations *', 'write', 'disable', 'clear', 'exit'
             ],
             'config': [
                 'interface ', 'interface vlan ', 'vlan ', 'hostname ', 'enable secret ', 'service password-encryption',
                 'banner motd #Authorized Access Only#', 'line console 0', 'line vty 0 4', 'crypto key generate rsa',
                 'ip routing', 'ipv6 unicast-routing', 'ip route ', 'no ip route ', 'ip default-gateway ',
-                'router ospf 1', 'access-list 100 ', 'ip nat inside source static ',
-                'ip nat inside source list 1 interface Gig0/1 overload', 'exit', 'end'
+                'ip dhcp excluded-address ', 'ip dhcp pool ', 'router ospf 1', 'access-list 100 ',
+                'ip nat inside source static ', 'ip nat inside source list 1 interface Gig0/1 overload', 'exit', 'end'
             ],
             'config-vlan': ['name ', 'exit', 'end'],
             'config-line': ['password ', 'login', 'login local', 'transport input ssh', 'exit', 'end'],
             'config-if': [
                 'ip address ', 'ip address dhcp', 'ipv6 address ', 'ipv6 address autoconfig',
-                'ip nat inside', 'ip nat outside', 'ip access-group 100 in',
+                'ip nat inside', 'ip nat outside', 'ip access-group 100 in', 'ip ospf cost ',
                 'encapsulation dot1Q ', 'switchport mode trunk', 'switchport mode access',
                 'switchport access vlan ', 'switchport trunk native vlan ', 'no shutdown', 'shutdown', 'exit', 'end'
             ],
             'config-router': [
-                'network ', 'no network ', 'exit', 'end'
+                'network ', 'no network ', 'router-id ', 'exit', 'end'
+            ],
+            'config-dhcp': [
+                'network ', 'default-router ', 'dns-server ', 'domain-name ', 'exit', 'end'
             ]
         };
 
@@ -236,6 +254,8 @@ class CiscoCLI {
             'sh ip os': 'show ip ospf neighbor',
             'sh ip na': 'show ip nat translations',
             'sh ip nat tr': 'show ip nat translations',
+            'sh ip dh': 'show ip dhcp binding',
+            'sh ip dhcp bi': 'show ip dhcp binding',
             'sh acc': 'show access-lists',
             'sh run': 'show running-config',
             'sh vl': 'show vlan brief',
@@ -308,8 +328,25 @@ class CiscoCLI {
             this.device.cliHistory = '';
             return '__CLEARED__';
         }
-        if (cmd === 'clear' && arg1.startsWith('arp')) {
+        if (cmd === 'clear' && (arg1.startsWith('arp') || (arg1 === 'ip' && arg2 === 'arp'))) {
+            this.device.arpCache = {};
+            if (this.onStateChange) this.onStateChange();
             return '%ARP-6-CACHE_CLEARED: IP ARP cache cleared on all interfaces.';
+        }
+        if (cmd === 'clear' && arg1 === 'ip' && arg2 === 'nat') {
+            this.device.natTranslations = [];
+            if (this.onStateChange) this.onStateChange();
+            return '%NAT-6-CLEARED: Dynamic NAT/PAT translation table cleared.';
+        }
+        if (cmd === 'clear' && arg1 === 'ip' && arg2 === 'dhcp') {
+            this.device.dhcpBindings = [];
+            if (this.onStateChange) this.onStateChange();
+            return '%DHCP-6-CLEARED: DHCP lease binding table cleared.';
+        }
+        if (cmd === 'clear' && arg1.startsWith('mac')) {
+            this.device.macTable = [];
+            if (this.onStateChange) this.onStateChange();
+            return '%SW-6-MAC_CLEARED: Dynamic MAC address table cleared.';
         }
         if (cmd === '?' || cmd === 'help') {
             return this.getHelpText();
@@ -373,6 +410,22 @@ class CiscoCLI {
                 return '';
             }
             return `% Invalid input or command incomplete.\nType '?' or 'configure terminal' to configure.`;
+        }
+
+        // Cisco IOS Sub-Configuration Mode Automatic Transition:
+        // Allows typing `interface ...`, `router ospf ...`, `vlan ...`, `line ...`, `access-list ...`,
+        // `ip route ...`, `ip dhcp ...`, or `ip nat inside source ...` directly from any config-* sub-mode!
+        if (['config-if', 'config-vlan', 'config-line', 'config-router', 'config-dhcp'].includes(this.device.cliMode)) {
+            const isGlobalTransition =
+                cmd === 'interface' || cmd === 'int' ||
+                cmd === 'vlan' || cmd === 'line' || cmd === 'router' ||
+                cmd === 'hostname' || cmd === 'access-list' ||
+                (cmd === 'ip' && (arg1 === 'route' || arg1 === 'dhcp' || arg1 === 'default-gateway' || (arg1 === 'nat' && arg2 === 'inside' && arg3 === 'source')));
+            if (isGlobalTransition) {
+                this.device.cliMode = 'config';
+                this.device.cliCurrentIf = null;
+                this.device.cliCurrentDhcpPool = null;
+            }
         }
 
         // ================= VLAN CONFIG MODE (config-vlan)# =================
@@ -586,19 +639,27 @@ class CiscoCLI {
                 if (this.device.type !== 'router') {
                     return '% Access-lists are only supported on Router devices.';
                 }
-                const aclId = parseInt(tokens[1], 10) || 100;
+                const aclId = parseInt(tokens[1], 10);
                 const action = (tokens[2] || '').toLowerCase();
-                if (!['permit', 'deny'].includes(action)) {
-                    return '% Usage:\n  Standard ACL (1-99):  access-list 1 <permit|deny> <src-ip|any> [wildcard]\n  Extended ACL (100+):  access-list 100 <permit|deny> <icmp|tcp|ip> <src|any> <dst|any>';
+                if (isNaN(aclId) || aclId < 1 || aclId > 199 || !['permit', 'deny'].includes(action)) {
+                    return '% Usage:\n  Standard ACL (1-99):  access-list <1-99> <permit|deny> <src-ip|host ip|any> [wildcard]\n  Extended ACL (100+):  access-list <100-199> <permit|deny> <icmp|tcp|udp|ip> <src> [<src-wildcard>] <dst> [<dst-wildcard>] [eq <port>]';
                 }
 
                 // Standard ACL (1-99): access-list 1 permit|deny <src|any|host X> [wildcard]
                 if (aclId >= 1 && aclId <= 99) {
                     let src = (tokens[3] || 'any').toLowerCase();
                     let srcWildcard = tokens[4] || '0.0.0.0';
-                    if (src === 'host') {
+                    if (src === 'any') {
+                        srcWildcard = '255.255.255.255';
+                    } else if (src === 'host') {
                         src = tokens[4] || 'any';
                         srcWildcard = '0.0.0.0';
+                    } else if (!NetworkEngine.isValidIPv4(src)) {
+                        return '% Invalid source IP address in Standard ACL.';
+                    } else if (!tokens[4]) {
+                        srcWildcard = '0.0.0.0';
+                    } else if (!NetworkEngine.isValidIPv4(srcWildcard)) {
+                        return '% Invalid wildcard mask in Standard ACL.';
                     }
                     this.device.acls = this.device.acls || [];
                     this.device.acls.push({
@@ -606,37 +667,46 @@ class CiscoCLI {
                         action,
                         protocol: 'ip',
                         src,
-                        srcWildcard: NetworkEngine.isValidIPv4(srcWildcard) ? srcWildcard : '0.0.0.0',
+                        srcWildcard,
                         dst: 'any',
-                        dstWildcard: '0.0.0.0',
+                        dstWildcard: '255.255.255.255',
                         hits: 0
                     });
                     if (this.onStateChange) this.onStateChange();
-                    return `%SEC-6-ACL_ADDED: Standard IP access list ${aclId} (${action} ${src}) active`;
+                    return `%SEC-6-ACL_ADDED: Standard IP access list ${aclId} (${action} ${src} ${srcWildcard}) active`;
                 }
 
                 // Extended ACL (100-199)
                 const proto = (tokens[3] || 'ip').toLowerCase();
-                const src = (tokens[4] || 'any').toLowerCase();
-                const dst = (tokens[5] || 'any').toLowerCase();
-
                 if (!['icmp', 'tcp', 'udp', 'ip', 'http'].includes(proto)) {
-                    return '% Usage: access-list <100-199> <permit|deny> <icmp|tcp|ip> <src-ip|any> <dst-ip|any>';
+                    return '% Usage: access-list <100-199> <permit|deny> <icmp|tcp|udp|ip> <src> [<src-wildcard>] <dst> [<dst-wildcard>] [eq <port>]';
+                }
+
+                const parsedAcl = this._parseExtendedAclArgs(tokens.slice(4), proto);
+                if (!parsedAcl.valid) {
+                    return `% ${parsedAcl.error}`;
                 }
 
                 this.device.acls = this.device.acls || [];
-                this.device.acls.push({
+                const ruleObj = {
                     id: aclId,
                     action,
                     protocol: proto === 'http' ? 'tcp' : proto,
-                    src,
-                    srcWildcard: '0.0.0.0',
-                    dst,
-                    dstWildcard: '0.0.0.0',
+                    src: parsedAcl.src,
+                    srcWildcard: parsedAcl.srcWildcard,
+                    dst: parsedAcl.dst,
+                    dstWildcard: parsedAcl.dstWildcard,
                     hits: 0
-                });
+                };
+                if (parsedAcl.dstPort) {
+                    ruleObj.dstPort = parsedAcl.dstPort;
+                } else if (proto === 'http') {
+                    ruleObj.dstPort = 80;
+                }
+                this.device.acls.push(ruleObj);
                 if (this.onStateChange) this.onStateChange();
-                return `%SEC-6-ACL_ADDED: Extended IP access list ${aclId} (${action} ${proto} ${src} -> ${dst}) active`;
+                const portNote = ruleObj.dstPort ? ` eq ${ruleObj.dstPort}` : '';
+                return `%SEC-6-ACL_ADDED: Extended IP access list ${aclId} (${action} ${ruleObj.protocol} ${ruleObj.src} -> ${ruleObj.dst}${portNote}) active`;
             }
             if (cmd === 'no' && arg1 === 'access-list') {
                 const aclId = parseInt(tokens[2], 10);
@@ -648,6 +718,56 @@ class CiscoCLI {
                 if (this.onStateChange) this.onStateChange();
                 return '';
             }
+            // DHCP Server: ip dhcp excluded-address & ip dhcp pool
+            if (cmd === 'ip' && arg1 === 'dhcp') {
+                if (!NetworkEngine.isL3Device(this.device)) {
+                    return '% DHCP server configuration is only supported on Routers or Layer 3 Switches.';
+                }
+                if (arg2.startsWith('excluded')) {
+                    const lowIp = tokens[3];
+                    const highIp = tokens[4] || lowIp;
+                    if (!NetworkEngine.isValidIPv4(lowIp) || !NetworkEngine.isValidIPv4(highIp)) {
+                        return '% Usage: ip dhcp excluded-address <low-ip> [<high-ip>]';
+                    }
+                    this.device.dhcpExcluded = this.device.dhcpExcluded || [];
+                    this.device.dhcpExcluded.push({ low: lowIp, high: highIp });
+                    if (this.onStateChange) this.onStateChange();
+                    return `%DHCPD-6-EXCLUDED: Excluded IP range ${lowIp} - ${highIp} registered`;
+                }
+                if (arg2 === 'pool') {
+                    const poolName = tokens[3];
+                    if (!poolName) return '% Usage: ip dhcp pool <pool-name>';
+                    this.device.dhcpPools = this.device.dhcpPools || [];
+                    let pool = this.device.dhcpPools.find(p => p.name === poolName);
+                    if (!pool) {
+                        pool = { name: poolName, network: '', mask: '255.255.255.0', defaultRouter: '', dnsServer: '' };
+                        this.device.dhcpPools.push(pool);
+                    }
+                    this.device.cliCurrentDhcpPool = poolName;
+                    this.device.cliMode = 'config-dhcp';
+                    if (this.onStateChange) this.onStateChange();
+                    return '';
+                }
+                return '% Usage: ip dhcp pool <name> or ip dhcp excluded-address <low-ip> [<high-ip>]';
+            }
+            if (cmd === 'no' && arg1 === 'ip' && arg2 === 'dhcp') {
+                if (arg3.startsWith('excluded')) {
+                    const lowIp = tokens[4];
+                    if (!lowIp) {
+                        this.device.dhcpExcluded = [];
+                    } else {
+                        this.device.dhcpExcluded = (this.device.dhcpExcluded || []).filter(r => r.low !== lowIp);
+                    }
+                    if (this.onStateChange) this.onStateChange();
+                    return '';
+                }
+                if (arg3 === 'pool') {
+                    const poolName = tokens[4];
+                    this.device.dhcpPools = (this.device.dhcpPools || []).filter(p => p.name !== poolName);
+                    if (this.onStateChange) this.onStateChange();
+                    return '';
+                }
+            }
             // Static NAT & Dynamic NAT / PAT Overload
             if (cmd === 'ip' && arg1 === 'nat') {
                 if (this.device.type !== 'router') return '% NAT is only supported on Router devices.';
@@ -658,7 +778,12 @@ class CiscoCLI {
                         return '% Usage: ip nat inside source static <inside-local-ip> <inside-global-ip>';
                     }
                     this.device.staticNat = this.device.staticNat || [];
-                    this.device.staticNat.push({ insideLocal: localIp, insideGlobal: globalIp });
+                    const existing = this.device.staticNat.find(s => s.insideLocal === localIp);
+                    if (existing) {
+                        existing.insideGlobal = globalIp;
+                    } else {
+                        this.device.staticNat.push({ insideLocal: localIp, insideGlobal: globalIp });
+                    }
                     this.device.natEnabled = true;
                     this.device.natTranslations = this.device.natTranslations || [];
                     this.device.natTranslations.unshift({
@@ -671,12 +796,31 @@ class CiscoCLI {
                     if (this.onStateChange) this.onStateChange();
                     return `%NAT-6-STATIC: Static NAT mapping ${localIp} -> ${globalIp} configured`;
                 }
+                if (arg2 === 'inside' && arg3 === 'source' && (tokens[4] || '').toLowerCase() === 'list') {
+                    const aclId = parseInt(tokens[5], 10);
+                    const ifKeyword = (tokens[6] || '').toLowerCase();
+                    const rawOutIf = tokens[7];
+                    const overloadFlag = (tokens[8] || 'overload').toLowerCase() === 'overload';
+                    if (isNaN(aclId) || ifKeyword !== 'interface' || !rawOutIf) {
+                        return '% Usage: ip nat inside source list <acl-id> interface <out-interface> overload';
+                    }
+                    const matchedOutIf = this.findMatchingPort(rawOutIf) || rawOutIf;
+                    this.device.natRule = {
+                        aclId,
+                        outInterface: matchedOutIf,
+                        overload: overloadFlag
+                    };
+                    this.device.natEnabled = true;
+                    if (this.onStateChange) this.onStateChange();
+                    return `%NAT-6-PAT_OVERLOAD: PAT Overload bound to ACL ${aclId} -> outside interface ${matchedOutIf}`;
+                }
                 this.device.natEnabled = true;
                 if (this.onStateChange) this.onStateChange();
                 return `%NAT-6-ENABLED: Dynamic NAT/PAT Overload enabled on ${this.device.name}`;
             }
             if (cmd === 'no' && arg1 === 'ip' && arg2 === 'nat') {
                 this.device.natEnabled = false;
+                this.device.natRule = null;
                 this.device.staticNat = [];
                 this.device.natTranslations = [];
                 if (this.onStateChange) this.onStateChange();
@@ -726,6 +870,63 @@ class CiscoCLI {
             return `% Invalid command in global config mode.`;
         }
 
+        // ================= DHCP POOL CONFIG MODE (dhcp-config)# =================
+        if (this.device.cliMode === 'config-dhcp') {
+            if (cmd === 'exit' || cmd === 'ex') {
+                this.device.cliMode = 'config';
+                this.device.cliCurrentDhcpPool = null;
+                return '';
+            }
+            if (cmd === 'end') {
+                this.device.cliMode = 'privileged';
+                this.device.cliCurrentDhcpPool = null;
+                return '';
+            }
+            const pool = (this.device.dhcpPools || []).find(p => p.name === this.device.cliCurrentDhcpPool);
+            if (!pool) {
+                this.device.cliMode = 'config';
+                return '% No active DHCP pool.';
+            }
+            if (cmd === 'network' || cmd === 'net') {
+                const netIp = tokens[1];
+                const mask = tokens[2] || '255.255.255.0';
+                if (!NetworkEngine.isValidIPv4(netIp) || !NetworkEngine.isValidMask(mask)) {
+                    return '% Usage: network <network-number> <subnet-mask>';
+                }
+                pool.network = NetworkEngine.getNetworkAddress(netIp, mask);
+                pool.mask = mask;
+                if (this.onStateChange) this.onStateChange();
+                return `%DHCPD-6-POOL_NET: Pool "${pool.name}" network set to ${pool.network} ${pool.mask}`;
+            }
+            if (cmd === 'default-router' || cmd === 'def') {
+                const gw = tokens[1];
+                if (!NetworkEngine.isValidIPv4(gw)) {
+                    return '% Usage: default-router <gateway-ip>';
+                }
+                pool.defaultRouter = gw;
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'dns-server' || cmd === 'dns') {
+                const dns = tokens[1];
+                if (!NetworkEngine.isValidIPv4(dns)) {
+                    return '% Usage: dns-server <dns-ip>';
+                }
+                pool.dnsServer = dns;
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'domain-name') {
+                pool.domainName = tokens[1] || 'local';
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'do') {
+                return this.executeInPrivilegedContext(tokens.slice(1).join(' '));
+            }
+            return `% Usage in DHCP Pool mode: network <ip> <mask>, default-router <ip>, dns-server <ip>, exit`;
+        }
+
         // ================= ROUTER OSPF CONFIG MODE =================
         if (this.device.cliMode === 'config-router') {
             if (cmd === 'exit' || cmd === 'ex') {
@@ -735,6 +936,16 @@ class CiscoCLI {
             if (cmd === 'end') {
                 this.device.cliMode = 'privileged';
                 return '';
+            }
+            if (cmd === 'router-id') {
+                const rid = tokens[1];
+                if (!NetworkEngine.isValidIPv4(rid)) {
+                    return '% Usage: router-id <A.B.C.D>';
+                }
+                this.device.ospf = this.device.ospf || { processId: 1, networks: [] };
+                this.device.ospf.routerId = rid;
+                if (this.onStateChange) this.onStateChange();
+                return `%OSPF-5-ROUTERID: OSPF process ${this.device.ospf.processId || 1} router-id set to ${rid}`;
             }
             if (cmd === 'network' || cmd === 'net') {
                 const netIp = tokens[1];
@@ -748,8 +959,10 @@ class CiscoCLI {
                 const mask = NetworkEngine.wildcardToMask(wildcard);
                 const normalizedNet = NetworkEngine.getNetworkAddress(netIp, mask);
                 this.device.ospf = this.device.ospf || { processId: 1, networks: [] };
-                const exists = this.device.ospf.networks.some(n => n.network === normalizedNet && n.wildcard === wildcard);
-                if (!exists) {
+                const existingIdx = this.device.ospf.networks.findIndex(n => n.network === normalizedNet && n.wildcard === wildcard);
+                if (existingIdx >= 0) {
+                    this.device.ospf.networks[existingIdx].area = isNaN(areaId) ? 0 : areaId;
+                } else {
                     this.device.ospf.networks.push({ network: normalizedNet, wildcard, area: isNaN(areaId) ? 0 : areaId });
                 }
                 if (this.onStateChange) this.onStateChange();
@@ -786,13 +999,40 @@ class CiscoCLI {
                 portObj.description = tokens.slice(1).join(' ');
                 return '';
             }
+            // ip ospf cost <1-65535>
+            if (cmd === 'ip' && arg1 === 'ospf' && arg2 === 'cost') {
+                const cost = parseInt(tokens[3], 10);
+                if (isNaN(cost) || cost < 1 || cost > 65535) {
+                    return '% Usage: ip ospf cost <1-65535>';
+                }
+                portObj.ospfCost = cost;
+                if (this.onStateChange) this.onStateChange();
+                return `%OSPF-6-COST: Interface ${currentPort} OSPF cost set to ${cost}`;
+            }
             // ip access-group <id> <in|out>
             if (cmd === 'ip' && arg1 === 'access-group') {
                 const aclId = parseInt(tokens[2], 10) || 100;
                 const dir = (tokens[3] || 'in').toLowerCase();
+                if (!['in', 'out'].includes(dir)) {
+                    return '% Usage: ip access-group <acl-id> <in|out>';
+                }
                 portObj.aclGroup = { id: aclId, direction: dir };
+                if (dir === 'in') portObj.aclIn = aclId;
+                if (dir === 'out') portObj.aclOut = aclId;
                 if (this.onStateChange) this.onStateChange();
                 return `%SEC-6-ACL_BOUND: Access-list ${aclId} applied ${dir.toUpperCase()}BOUND on ${currentPort}`;
+            }
+            if (cmd === 'no' && arg1 === 'ip' && arg2 === 'access-group') {
+                const dir = (tokens[4] || '').toLowerCase();
+                if (dir === 'in') delete portObj.aclIn;
+                else if (dir === 'out') delete portObj.aclOut;
+                else {
+                    delete portObj.aclIn;
+                    delete portObj.aclOut;
+                }
+                delete portObj.aclGroup;
+                if (this.onStateChange) this.onStateChange();
+                return '';
             }
             // ip nat inside / outside
             if (cmd === 'ip' && arg1 === 'nat' && (arg2 === 'inside' || arg2 === 'outside')) {
@@ -801,6 +1041,11 @@ class CiscoCLI {
                 this.device.natEnabled = true;
                 if (this.onStateChange) this.onStateChange();
                 return `%NAT-6-INTF: Interface ${currentPort} configured as IP NAT ${arg2.toUpperCase()}`;
+            }
+            if (cmd === 'no' && arg1 === 'ip' && arg2 === 'nat') {
+                delete portObj.nat;
+                if (this.onStateChange) this.onStateChange();
+                return '';
             }
             // IPv6 Interface Configuration: ipv6 address <addr/prefix | autoconfig>
             if (cmd === 'ipv6' && (arg1 === 'address' || arg1 === 'add')) {
@@ -932,6 +1177,84 @@ class CiscoCLI {
         return `% Unrecognized command.`;
     }
 
+    /**
+     * Parse Extended ACL source/destination address + wildcard + optional eq port
+     * Supports:
+     *   any
+     *   host <ip>
+     *   <ip> <wildcard>
+     *   <ip> (shorthand host IP when no wildcard is provided)
+     */
+    _parseExtendedAclArgs(args, proto) {
+        if (!args || args.length === 0) {
+            return { valid: false, error: 'Missing source and destination in Extended ACL.' };
+        }
+        let idx = 0;
+
+        const parseEndpoint = (isSource) => {
+            const tok = (args[idx] || '').toLowerCase();
+            if (!tok) return null;
+            if (tok === 'any') {
+                idx += 1;
+                return { ip: 'any', wildcard: '255.255.255.255' };
+            }
+            if (tok === 'host') {
+                const hostIp = args[idx + 1];
+                if (!NetworkEngine.isValidIPv4(hostIp)) return null;
+                idx += 2;
+                return { ip: hostIp, wildcard: '0.0.0.0' };
+            }
+            if (NetworkEngine.isValidIPv4(args[idx])) {
+                const ip = args[idx];
+                const nextTok = args[idx + 1];
+                const afterNextTok = (args[idx + 2] || '').toLowerCase();
+                if (isSource) {
+                    // For source: nextTok is wildcard if there is still a destination token after it
+                    if (nextTok && NetworkEngine.isValidIPv4(nextTok) && afterNextTok && afterNextTok !== 'eq') {
+                        idx += 2;
+                        return { ip, wildcard: nextTok };
+                    }
+                    idx += 1;
+                    return { ip, wildcard: '0.0.0.0' };
+                } else {
+                    // For destination: nextTok is wildcard if it is a valid IPv4
+                    if (nextTok && NetworkEngine.isValidIPv4(nextTok)) {
+                        idx += 2;
+                        return { ip, wildcard: nextTok };
+                    }
+                    idx += 1;
+                    return { ip, wildcard: '0.0.0.0' };
+                }
+            }
+            return null;
+        };
+
+        const srcObj = parseEndpoint(true);
+        if (!srcObj) {
+            return { valid: false, error: 'Invalid source address or wildcard in Extended ACL.' };
+        }
+        const dstObj = parseEndpoint(false);
+        if (!dstObj) {
+            return { valid: false, error: 'Invalid destination address or wildcard in Extended ACL.' };
+        }
+
+        let dstPort = null;
+        if ((args[idx] || '').toLowerCase() === 'eq') {
+            const portTok = (args[idx + 1] || '').toLowerCase();
+            const portMap = { www: 80, http: 80, https: 443, ssh: 22, telnet: 23, dns: 53, domain: 53 };
+            dstPort = portMap[portTok] || parseInt(portTok, 10) || null;
+        }
+
+        return {
+            valid: true,
+            src: srcObj.ip,
+            srcWildcard: srcObj.wildcard,
+            dst: dstObj.ip,
+            dstWildcard: dstObj.wildcard,
+            dstPort
+        };
+    }
+
     executeInPrivilegedContext(subCmd) {
         const prevMode = this.device.cliMode;
         this.device.cliMode = 'privileged';
@@ -1010,14 +1333,58 @@ class CiscoCLI {
                 out += `${isStd ? 'Standard' : 'Extended'} IP access list ${id}\n`;
                 list.forEach((r, idx) => {
                     const seq = (idx + 1) * 10;
+                    const srcStr = r.src === 'any'
+                        ? 'any'
+                        : (r.srcWildcard && r.srcWildcard !== '0.0.0.0' ? `${r.src}, wildcard bits ${r.srcWildcard}` : `host ${r.src}`);
                     if (isStd) {
-                        out += `    ${seq} ${r.action} ${r.src} (${r.hits || 0} matches)\n`;
+                        out += `    ${seq} ${r.action} ${srcStr} (${r.hits || 0} matches)\n`;
                     } else {
-                        const eqSuffix = r.protocol === 'tcp' ? ' eq www (80)' : '';
-                        out += `    ${seq} ${r.action} ${r.protocol} ${r.src} ${r.dst || 'any'}${eqSuffix} (${r.hits || 0} matches)\n`;
+                        const dstVal = r.dst || 'any';
+                        const dstStr = dstVal === 'any'
+                            ? 'any'
+                            : (r.dstWildcard && r.dstWildcard !== '0.0.0.0' ? `${dstVal}, wildcard bits ${r.dstWildcard}` : `host ${dstVal}`);
+                        const eqSuffix = r.dstPort ? ` eq ${r.dstPort === 80 ? 'www (80)' : r.dstPort}` : '';
+                        out += `    ${seq} ${r.action} ${r.protocol} ${srcStr} ${dstStr}${eqSuffix} (${r.hits || 0} matches)\n`;
                     }
                 });
+                out += `    (Implicit Deny: deny ip any any)\n`;
             }
+            return out.trimEnd();
+        }
+
+        // show ip dhcp binding
+        if (full.startsWith('ip dhcp bind') || full === 'ip dhcp') {
+            const bindings = this.device.dhcpBindings || [];
+            if (bindings.length === 0) {
+                return 'Bindings from all pools not associated with VRF:\nIP address          Client-ID/              Lease expiration        Type\n                    Hardware address/\n                    User name\n(No active DHCP leases yet)';
+            }
+            let out = 'Bindings from all pools not associated with VRF:\n';
+            out += 'IP address          Client-ID/              Lease expiration        Type\n';
+            out += '                    Hardware address/\n';
+            out += '--------------------------------------------------------------------------------\n';
+            bindings.forEach(b => {
+                out += `${(b.ip || '').padEnd(20, ' ')}${(b.mac || '').padEnd(24, ' ')}${(b.leaseTime || '24h').padEnd(24, ' ')}${b.type || 'Automatic'} (${b.clientName || ''})\n`;
+            });
+            return out.trimEnd();
+        }
+
+        // show ip dhcp pool
+        if (full.startsWith('ip dhcp pool')) {
+            const pools = this.device.dhcpPools || [];
+            if (pools.length === 0) {
+                return 'No DHCP pools configured on this device.';
+            }
+            let out = '';
+            pools.forEach(p => {
+                const leasedCount = (this.device.dhcpBindings || []).filter(b => b.pool === p.name).length;
+                out += `Pool ${p.name} :\n`;
+                out += ` Utilization mark (high/low)    : 100 / 0\n`;
+                out += ` Subnet size (first/next)       : 0 / 0\n`;
+                out += ` Current index                  : ${p.network || 'unassigned'}\n`;
+                out += ` Default router                 : ${p.defaultRouter || 'not set'}\n`;
+                out += ` DNS server                     : ${p.dnsServer || 'not set'}\n`;
+                out += ` Leased addresses               : ${leasedCount}\n\n`;
+            });
             return out.trimEnd();
         }
 
@@ -1089,6 +1456,17 @@ class CiscoCLI {
             let out = '          Mac Address Table (CAM Table)\n-------------------------------------------\n';
             out += 'Vlan    Mac Address       Type        Ports\n';
             out += '----    -----------       --------    -----\n';
+
+            const seenMacs = new Set();
+            // 1. Dynamically learned MACs from frame forwarding
+            (this.device.macTable || []).forEach(entry => {
+                if (entry.mac && !seenMacs.has(`${entry.vlan}:${entry.mac}`)) {
+                    seenMacs.add(`${entry.vlan}:${entry.mac}`);
+                    out += `${String(entry.vlan || 1).padEnd(8, ' ')}${entry.mac.padEnd(18, ' ')}${(entry.type || 'DYNAMIC').padEnd(12, ' ')}${entry.port}\n`;
+                }
+            });
+
+            // 2. Directly connected UP ports
             const myCables = allCables.filter(c => c.from === this.device.id || c.to === this.device.id);
             myCables.forEach(c => {
                 const myPort = c.from === this.device.id ? c.fromPort : c.toPort;
@@ -1099,7 +1477,10 @@ class CiscoCLI {
                     const pObj = peerDev.ports[peerPort];
                     if (!pObj.mac) pObj.mac = NetworkEngine.generateMac(peerDev.type);
                     const vlan = this.device.ports[myPort]?.mode === 'trunk' ? 'ALL' : String(this.device.ports[myPort]?.vlan || 1);
-                    out += `${vlan.padEnd(8, ' ')}${pObj.mac.padEnd(18, ' ')}DYNAMIC     ${myPort} (${peerDev.name})\n`;
+                    if (!seenMacs.has(`${vlan}:${pObj.mac}`) && !seenMacs.has(`${this.device.ports[myPort]?.vlan || 1}:${pObj.mac}`)) {
+                        seenMacs.add(`${vlan}:${pObj.mac}`);
+                        out += `${vlan.padEnd(8, ' ')}${pObj.mac.padEnd(18, ' ')}DYNAMIC     ${myPort} (${peerDev.name})\n`;
+                    }
                 }
             });
             return out.trimEnd();
@@ -1108,12 +1489,35 @@ class CiscoCLI {
         // show ip arp
         if (full.startsWith('ip arp') || full === 'arp') {
             let out = 'Protocol  Address          Age (min)  Hardware Addr   Type   Interface\n';
+            const shownIps = new Set();
+
+            // 1. Own UP interfaces (Age '-')
+            Object.entries(this.device.ports).forEach(([pName, pObj]) => {
+                if (pObj.ip && NetworkEngine.isInterfaceUp(this.device, pName)) {
+                    if (!pObj.mac) pObj.mac = NetworkEngine.generateMac(this.device.type);
+                    shownIps.add(pObj.ip);
+                    out += `Internet  ${pObj.ip.padEnd(17, ' ')}${'-'.padEnd(11, ' ')}${pObj.mac.padEnd(16, ' ')}ARPA   ${pName}\n`;
+                }
+            });
+
+            // 2. Dynamic ARP Cache entries learned during packet simulation
+            if (this.device.arpCache) {
+                Object.entries(this.device.arpCache).forEach(([ip, entry]) => {
+                    if (!shownIps.has(ip) && entry && entry.mac) {
+                        shownIps.add(ip);
+                        out += `Internet  ${ip.padEnd(17, ' ')}${'0'.padEnd(11, ' ')}${entry.mac.padEnd(16, ' ')}ARPA   ${entry.interface || 'Eth0'}\n`;
+                    }
+                });
+            }
+
+            // 3. Same-subnet reachable peers
             allDevices.forEach(dev => {
+                if (dev.id === this.device.id) return;
                 Object.entries(dev.ports).forEach(([pName, pObj]) => {
-                    if (pObj.ip && NetworkEngine.isInterfaceUp(dev, pName)) {
+                    if (pObj.ip && !shownIps.has(pObj.ip) && NetworkEngine.isInterfaceUp(dev, pName)) {
                         if (!pObj.mac) pObj.mac = NetworkEngine.generateMac(dev.type);
-                        const age = dev.id === this.device.id ? '-' : '0';
-                        out += `Internet  ${pObj.ip.padEnd(17, ' ')}${age.padEnd(11, ' ')}${pObj.mac.padEnd(16, ' ')}ARPA   ${dev.name}(${pName})\n`;
+                        shownIps.add(pObj.ip);
+                        out += `Internet  ${pObj.ip.padEnd(17, ' ')}${'0'.padEnd(11, ' ')}${pObj.mac.padEnd(16, ' ')}ARPA   ${dev.name}(${pName})\n`;
                     }
                 });
             });
@@ -1127,11 +1531,11 @@ class CiscoCLI {
             }
             const neighbors = NetworkEngine.getOspfNeighbors(this.device, allDevices, allCables);
             if (neighbors.length === 0) {
-                return 'No active OSPF neighbors found. Verify "router ospf" network statements and interface status.';
+                return 'No active OSPF neighbors found. Verify "router ospf" network statements, Area IDs, and interface status.';
             }
             let out = 'Neighbor ID     Pri   State           Dead Time   Address         Interface\n';
             neighbors.forEach(n => {
-                out += `${n.neighborId.padEnd(16, ' ')}${String(n.pri).padEnd(6, ' ')}${n.state.padEnd(16, ' ')}00:00:38    ${n.address.padEnd(16, ' ')}${n.interface} (${n.hostname})\n`;
+                out += `${n.neighborId.padEnd(16, ' ')}${String(n.pri).padEnd(6, ' ')}${n.state.padEnd(16, ' ')}00:00:38    ${n.address.padEnd(16, ' ')}${n.interface} (Area ${n.area}, ${n.hostname})\n`;
             });
             return out.trimEnd();
         }
@@ -1166,7 +1570,7 @@ class CiscoCLI {
 
         // show running-config
         if (full.startsWith('run')) {
-            let out = `Building configuration...\n\nCurrent configuration : 1240 bytes\n!\n`;
+            let out = `Building configuration...\n\nCurrent configuration : 1480 bytes\n!\n`;
             if (this.device.passwordEncryption) out += `service password-encryption\n`;
             out += `hostname ${this.device.name}\n!\n`;
             if (this.device.enableSecret) {
@@ -1177,6 +1581,21 @@ class CiscoCLI {
             }
             if (this.device.ipv6Routing) {
                 out += `ipv6 unicast-routing\n!\n`;
+            }
+            if (this.device.dhcpExcluded && this.device.dhcpExcluded.length > 0) {
+                for (const ex of this.device.dhcpExcluded) {
+                    out += `ip dhcp excluded-address ${ex.low}${ex.high && ex.high !== ex.low ? ' ' + ex.high : ''}\n`;
+                }
+                out += `!\n`;
+            }
+            if (this.device.dhcpPools && this.device.dhcpPools.length > 0) {
+                for (const pool of this.device.dhcpPools) {
+                    out += `ip dhcp pool ${pool.name}\n`;
+                    if (pool.network) out += ` network ${pool.network} ${pool.mask || '255.255.255.0'}\n`;
+                    if (pool.defaultRouter) out += ` default-router ${pool.defaultRouter}\n`;
+                    if (pool.dnsServer) out += ` dns-server ${pool.dnsServer}\n`;
+                    out += `!\n`;
+                }
             }
             if (this.device.gateway) {
                 out += `ip default-gateway ${this.device.gateway}\n!\n`;
@@ -1208,6 +1627,9 @@ class CiscoCLI {
                     if (pObj.nat) {
                         out += ` ip nat ${pObj.nat}\n`;
                     }
+                    if (pObj.ospfCost) {
+                        out += ` ip ospf cost ${pObj.ospfCost}\n`;
+                    }
                     if (pObj.aclGroup) {
                         out += ` ip access-group ${pObj.aclGroup.id} ${pObj.aclGroup.direction}\n`;
                     }
@@ -1216,6 +1638,9 @@ class CiscoCLI {
             }
             if (NetworkEngine.isL3Device(this.device) && this.device.ospf?.networks?.length > 0) {
                 out += `router ospf ${this.device.ospf.processId || 1}\n`;
+                if (this.device.ospf.routerId) {
+                    out += ` router-id ${this.device.ospf.routerId}\n`;
+                }
                 for (const n of this.device.ospf.networks) {
                     out += ` network ${n.network} ${n.wildcard} area ${n.area}\n`;
                 }
@@ -1227,9 +1652,26 @@ class CiscoCLI {
                 }
                 out += `!\n`;
             }
+            if (this.device.type === 'router' && this.device.natRule) {
+                out += `ip nat inside source list ${this.device.natRule.aclId} interface ${this.device.natRule.outInterface}${this.device.natRule.overload ? ' overload' : ''}\n!\n`;
+            }
+            if (this.device.type === 'router' && this.device.staticNat?.length > 0) {
+                for (const s of this.device.staticNat) {
+                    out += `ip nat inside source static ${s.insideLocal} ${s.insideGlobal}\n`;
+                }
+                out += `!\n`;
+            }
             if (this.device.type === 'router' && this.device.acls?.length > 0) {
                 for (const a of this.device.acls) {
-                    out += `access-list ${a.id} ${a.action} ${a.protocol} ${a.src} ${a.dst || 'any'}\n`;
+                    if (Number(a.id) < 100) {
+                        const wc = a.srcWildcard && a.srcWildcard !== '0.0.0.0' && a.src !== 'any' ? ` ${a.srcWildcard}` : '';
+                        out += `access-list ${a.id} ${a.action} ${a.src}${wc}\n`;
+                    } else {
+                        const swc = a.srcWildcard && a.srcWildcard !== '0.0.0.0' && a.src !== 'any' ? ` ${a.srcWildcard}` : '';
+                        const dwc = a.dstWildcard && a.dstWildcard !== '0.0.0.0' && a.dst !== 'any' ? ` ${a.dstWildcard}` : '';
+                        const eq = a.dstPort ? ` eq ${a.dstPort}` : '';
+                        out += `access-list ${a.id} ${a.action} ${a.protocol} ${a.src}${swc} ${a.dst || 'any'}${dwc}${eq}\n`;
+                    }
                 }
                 out += `!\n`;
             }

@@ -273,60 +273,178 @@ const appState = {
 
     /**
      * Evaluates current Lab Topology against PKA Grading Objectives (0% - 100%)
+     * Strictly uses NetworkEngine simulation results and provides diagnostic reasons.
      */
     evaluateLabGrade() {
         const checks = [];
-        let title = 'Custom Network Topology';
+        let title = this.customLabConfig?.title || 'Custom Network Topology';
 
-        const checkConnectivity = (nameA, nameB, proto = 'icmp') => {
+        const runSim = (nameA, nameB, proto = 'icmp') => {
             const devA = this.devices.find(d => d.name === nameA);
             const devB = this.devices.find(d => d.name === nameB);
-            if (!devA || !devB) return false;
-            const res = proto === 'tcp'
+            if (!devA || !devB) {
+                return { success: false, reason: `ไม่พบอุปกรณ์ ${!devA ? nameA : nameB} บนผังเครือข่าย` };
+            }
+            return proto === 'tcp'
                 ? NetworkEngine.simulateHttp(devA, devB, this.devices, this.cables)
                 : NetworkEngine.simulatePing(devA, devB, this.devices, this.cables);
-            return res.success;
         };
 
-        if (this.activePresetId === 'troubleshoot') {
+        // 1. Evaluate Custom Lab Editor Rules if defined
+        if (this.customLabConfig?.rules && this.customLabConfig.rules.length > 0) {
+            title = this.customLabConfig.title || 'Custom Lab Assessment';
+            for (const rule of this.customLabConfig.rules) {
+                if (rule.type === 'ping_pass') {
+                    const sim = runSim(rule.src, rule.dst, 'icmp');
+                    checks.push({
+                        label: `Ping (ICMP) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
+                        passed: !!sim.success,
+                        reason: sim.reason,
+                        isCustom: true
+                    });
+                } else if (rule.type === 'http_pass') {
+                    const sim = runSim(rule.src, rule.dst, 'tcp');
+                    checks.push({
+                        label: `เปิดเว็บ HTTP (Port 80) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
+                        passed: !!sim.success,
+                        reason: sim.reason,
+                        isCustom: true
+                    });
+                } else if (rule.type === 'ping_block') {
+                    const sim = runSim(rule.src, rule.dst, 'icmp');
+                    checks.push({
+                        label: `Firewall ACL บล็อก Ping จาก ${rule.src} ➔ ${rule.dst}`,
+                        passed: !sim.success && !!sim.aclBlocked,
+                        reason: sim.aclBlocked ? sim.reason : 'Packet ยังไม่ถูกบล็อกด้วยกฎ ACL (ต้องติด ACL Deny หรือ Implicit Deny)',
+                        isCustom: true
+                    });
+                } else if (rule.type === 'ospf_neighbor') {
+                    const dev = this.devices.find(d => d.name === rule.src);
+                    const neigs = dev ? NetworkEngine.getOspfNeighbors(dev, this.devices, this.cables) : [];
+                    checks.push({
+                        label: `อุปกรณ์ ${rule.src} สร้าง OSPF Neighbor สถานะ FULL สำเร็จ`,
+                        passed: neigs.length > 0,
+                        reason: neigs.length > 0 ? `พบ OSPF Neighbor ${neigs.map(n => n.hostname).join(', ')}` : 'ยังไม่พบ OSPF Neighbor (ตรวจสอบ network, wildcard, Area ID และสถานะพอร์ต)',
+                        isCustom: true
+                    });
+                } else if (rule.type === 'nat_active') {
+                    const dev = this.devices.find(d => d.name === rule.src);
+                    const hasIn = dev && Object.values(dev.ports).some(p => p.nat === 'inside');
+                    const hasOut = dev && Object.values(dev.ports).some(p => p.nat === 'outside');
+                    const ok = !!(dev && dev.natEnabled && hasIn && hasOut);
+                    checks.push({
+                        label: `ตั้งค่า NAT (ip nat inside / outside + overload) บน ${rule.src}`,
+                        passed: ok,
+                        reason: ok ? 'ตั้งค่า NAT Inside/Outside และเปิดใช้งาน NAT ครบถ้วน' : 'ต้องกำหนด ip nat inside, ip nat outside และคำสั่ง ip nat inside source ...',
+                        isCustom: true
+                    });
+                } else if (rule.type === 'trunk_active') {
+                    const dev = this.devices.find(d => d.name === rule.src);
+                    const hasTrunk = dev && Object.values(dev.ports).some(p => p.mode === 'trunk');
+                    checks.push({
+                        label: `ตั้งค่าพอร์ต 802.1Q Trunk บน ${rule.src}`,
+                        passed: !!hasTrunk,
+                        reason: hasTrunk ? 'พบพอร์ตโหมด 802.1Q Trunk แล้ว' : 'ยังไม่ได้ตั้งค่า switchport mode trunk บนพอร์ตเชื่อมต่อ',
+                        isCustom: true
+                    });
+                }
+            }
+        } else if (this.activePresetId === 'troubleshoot') {
             title = 'Lab 04: Troubleshooting Challenge (ซ่อมระบบล่ม 3 จุด)';
             const r1 = this.devices.find(d => d.name === 'R1-Gateway');
             const pc1 = this.devices.find(d => d.name === 'PC1');
             const srv = this.devices.find(d => d.name === 'Payroll-SRV');
+            const pingSim = runSim('PC1', 'Payroll-SRV', 'icmp');
             checks.push(
-                { label: 'เปิดพอร์ต Gig0/1 บน R1-Gateway (no shutdown)', passed: !!(r1 && r1.ports['Gig0/1']?.up) },
-                { label: 'ตั้งค่า Default Gateway ของ PC1 เป็น 192.168.10.1', passed: !!(pc1 && pc1.gateway === '192.168.10.1') },
-                { label: 'แก้ IP ของ Payroll-SRV เป็น 192.168.20.100', passed: !!(srv && srv.ports['Eth0']?.ip === '192.168.20.100') },
-                { label: 'ส่ง Ping จาก PC1 ไปยัง Payroll-SRV สำเร็จ', passed: checkConnectivity('PC1', 'Payroll-SRV', 'icmp') }
+                {
+                    label: 'เปิดพอร์ต Gig0/1 บน R1-Gateway (no shutdown)',
+                    passed: !!(r1 && r1.ports['Gig0/1']?.up),
+                    reason: r1?.ports['Gig0/1']?.up ? 'พอร์ต Gig0/1 สถานะ UP' : 'พอร์ต Gig0/1 ยังถูก Shutdown อยู่'
+                },
+                {
+                    label: 'ตั้งค่า Default Gateway ของ PC1 เป็น 192.168.10.1',
+                    passed: !!(pc1 && pc1.gateway === '192.168.10.1'),
+                    reason: pc1?.gateway === '192.168.10.1' ? 'Default Gateway ถูกต้อง (192.168.10.1)' : `Gateway ปัจจุบันคือ ${pc1?.gateway || 'ไม่ได้ตั้งค่า'}`
+                },
+                {
+                    label: 'แก้ IP ของ Payroll-SRV เป็น 192.168.20.100',
+                    passed: !!(srv && srv.ports['Eth0']?.ip === '192.168.20.100'),
+                    reason: srv?.ports['Eth0']?.ip === '192.168.20.100' ? 'IP อยู่ในวง 192.168.20.0/24 ถูกต้อง' : `IP ปัจจุบันคือ ${srv?.ports['Eth0']?.ip || 'ไม่มี'} (คนละวงกับ R1 Gig0/1)`
+                },
+                {
+                    label: 'ส่ง Ping จาก PC1 ไปยัง Payroll-SRV สำเร็จ',
+                    passed: !!pingSim.success,
+                    reason: pingSim.reason
+                }
             );
         } else if (this.activePresetId === 'roas-vlan') {
             title = 'Lab 05: VLAN Trunking & Router-on-a-Stick (802.1Q)';
             const sw = this.devices.find(d => d.type === 'switch');
             const r1 = this.devices.find(d => d.type === 'router');
+            const pingSim = runSim('HR-PC (VLAN10)', 'DB-SRV (VLAN20)', 'icmp');
             checks.push(
-                { label: 'ตั้งค่า 802.1Q Trunk บนพอร์ต Fa0/1 ของ Switch', passed: !!(sw && sw.ports['Fa0/1']?.mode === 'trunk') },
-                { label: 'สร้าง Sub-interface Gig0/0.10 และ Gig0/0.20 บน Router', passed: !!(r1 && r1.ports['Gig0/0.10']?.ip && r1.ports['Gig0/0.20']?.ip) },
-                { label: 'Ping ข้าม VLAN ระหว่าง HR-PC (VLAN10) ⟷ DB-SRV (VLAN20) สำเร็จ', passed: checkConnectivity('HR-PC (VLAN10)', 'DB-SRV (VLAN20)', 'icmp') }
+                {
+                    label: 'ตั้งค่า 802.1Q Trunk บนพอร์ต Fa0/1 ของ Switch',
+                    passed: !!(sw && sw.ports['Fa0/1']?.mode === 'trunk'),
+                    reason: sw?.ports['Fa0/1']?.mode === 'trunk' ? 'Fa0/1 เป็น 802.1Q Trunk แล้ว' : 'พอร์ต Fa0/1 ยังไม่ได้ตั้งเป็น switchport mode trunk'
+                },
+                {
+                    label: 'สร้าง Sub-interface Gig0/0.10 และ Gig0/0.20 บน Router',
+                    passed: !!(r1 && r1.ports['Gig0/0.10']?.ip && r1.ports['Gig0/0.20']?.ip),
+                    reason: (r1?.ports['Gig0/0.10']?.ip && r1?.ports['Gig0/0.20']?.ip) ? 'Sub-interfaces .10 และ .20 พร้อมใช้งาน' : 'ต้องสร้าง Sub-interface Gig0/0.10 และ Gig0/0.20 พร้อมกำหนด encapsulation dot1Q และ IP'
+                },
+                {
+                    label: 'Ping ข้าม VLAN ระหว่าง HR-PC (VLAN10) ⟷ DB-SRV (VLAN20) สำเร็จ',
+                    passed: !!pingSim.success,
+                    reason: pingSim.reason
+                }
             );
         } else if (this.activePresetId === 'ospf-core') {
             title = 'Lab 06: Enterprise OSPF Area 0 Dynamic Routing';
             const r1 = this.devices.find(d => d.name === 'R1-Edge');
             const r2 = this.devices.find(d => d.name === 'R2-Core');
-            const hasNeig = r1 && NetworkEngine.getOspfNeighbors(r1, this.devices, this.cables).length > 0;
+            const neigs = r1 ? NetworkEngine.getOspfNeighbors(r1, this.devices, this.cables) : [];
+            const pingSim = runSim('Edge-PC', 'Cloud-SRV', 'icmp');
             checks.push(
-                { label: 'เปิดใช้งาน OSPF Process 1 บน R1-Edge และ R2-Core', passed: !!(r1?.ospf?.networks?.length > 0 && r2?.ospf?.networks?.length > 0) },
-                { label: 'OSPF Neighbor Adjacency สถานะ FULL/DR', passed: !!hasNeig },
-                { label: 'Ping ข้ามเราเตอร์ OSPF จาก Edge-PC ➔ Cloud-SRV สำเร็จ', passed: checkConnectivity('Edge-PC', 'Cloud-SRV', 'icmp') }
+                {
+                    label: 'เปิดใช้งาน OSPF Process 1 บน R1-Edge และ R2-Core',
+                    passed: !!(r1?.ospf?.networks?.length > 0 && r2?.ospf?.networks?.length > 0),
+                    reason: (r1?.ospf?.networks?.length > 0 && r2?.ospf?.networks?.length > 0) ? 'ประกาศ OSPF Network ครบทั้ง 2 เราเตอร์' : 'ยังไม่ได้ประกาศ network ใน router ospf 1'
+                },
+                {
+                    label: 'OSPF Neighbor Adjacency สถานะ FULL (Area ตรงกัน)',
+                    passed: neigs.length > 0,
+                    reason: neigs.length > 0 ? `OSPF Neighbor ${neigs[0].neighborId} สถานะ ${neigs[0].state}` : 'ไม่พบ OSPF Neighbor (ตรวจสอบว่า Area ID ตรงกันและพอร์ต UP)'
+                },
+                {
+                    label: 'Ping ข้ามเราเตอร์ OSPF จาก Edge-PC ➔ Cloud-SRV สำเร็จ',
+                    passed: !!pingSim.success,
+                    reason: pingSim.reason
+                }
             );
         } else if (this.activePresetId === 'acl-nat') {
             title = 'Lab 07: ACL Firewall, NAT Overload & ISP Cloud';
             const r1 = this.devices.find(d => d.name === 'R1-Firewall');
-            const pingBlocked = !checkConnectivity('Corp-PC', 'ISP-Cloud', 'icmp');
-            const httpAllowed = checkConnectivity('Corp-PC', 'ISP-Cloud', 'tcp');
+            const pingSim = runSim('Corp-PC', 'ISP-Cloud', 'icmp');
+            const httpSim = runSim('Corp-PC', 'ISP-Cloud', 'tcp');
+            const pingBlockedByAcl = !pingSim.success && !!pingSim.aclBlocked;
+            const httpAllowedAndNatted = !!httpSim.success && !!httpSim.natTranslated;
             checks.push(
-                { label: 'เปิดใช้งาน NAT Overload บน R1-Firewall', passed: !!(r1 && r1.natEnabled) },
-                { label: 'ตั้งกฎ ACL บล็อก ICMP Ping แต่เปิดให้เข้าเว็บ HTTP Port 80 ได้', passed: pingBlocked && httpAllowed },
-                { label: 'เปิดเข้าเว็บ HTTP (Port 80) จาก Corp-PC ไปยัง ISP-Cloud สำเร็จ', passed: httpAllowed }
+                {
+                    label: 'เปิดใช้งาน NAT Overload (Inside/Outside) บน R1-Firewall',
+                    passed: !!(r1 && r1.natEnabled && httpAllowedAndNatted),
+                    reason: httpAllowedAndNatted ? 'แปลง Private IP เป็น Public IP (PAT Overload) สำเร็จ' : 'ต้องเปิดใช้งาน NAT บน R1-Firewall และส่งทราฟฟิกออกทาง Outside'
+                },
+                {
+                    label: 'ตั้งกฎ ACL บล็อก ICMP Ping แต่เปิดให้เข้าเว็บ HTTP Port 80 ได้',
+                    passed: pingBlockedByAcl && !!httpSim.success,
+                    reason: pingBlockedByAcl ? pingSim.reason : 'Ping ต้องถูกบล็อกด้วยกฎ ACL (ไม่ใช่เพราะสายหลุดหรือพอร์ตปิด) และ HTTP ต้องผ่านได้'
+                },
+                {
+                    label: 'เปิดเข้าเว็บ HTTP (Port 80) จาก Corp-PC ไปยัง ISP-Cloud สำเร็จ',
+                    passed: !!httpSim.success,
+                    reason: httpSim.reason
+                }
             );
         } else {
             // General connectivity check across all hosts with IP
@@ -334,12 +452,15 @@ const appState = {
             const hosts = this.devices.filter(d => (d.type === 'pc' || d.type === 'server' || d.type === 'cloud') && Object.values(d.ports).some(p => p.ip));
             checks.push({
                 label: 'มีอุปกรณ์และสายเชื่อมต่อครบถ้วน (อย่างน้อย 2 โหนด)',
-                passed: this.devices.length >= 2 && this.cables.length >= 1
+                passed: this.devices.length >= 2 && this.cables.length >= 1,
+                reason: this.devices.length >= 2 && this.cables.length >= 1 ? `มีอุปกรณ์ ${this.devices.length} โหนด และสาย ${this.cables.length} เส้น` : 'กรุณาวางอุปกรณ์และเชื่อมสายสัญญาณ'
             });
             if (hosts.length >= 2) {
+                const sim = runSim(hosts[0].name, hosts[hosts.length - 1].name, 'icmp');
                 checks.push({
                     label: `เชื่อมต่อระหว่าง ${hosts[0].name} ⟷ ${hosts[hosts.length - 1].name} สำเร็จ`,
-                    passed: checkConnectivity(hosts[0].name, hosts[hosts.length - 1].name, 'icmp')
+                    passed: !!sim.success,
+                    reason: sim.reason
                 });
             }
         }
@@ -650,6 +771,7 @@ const appState = {
         }
 
         if (shouldSave) {
+            this.customLabConfig = { title: '', rules: [] };
             this.saveToLocalStorage();
         }
         this.renderAll();
@@ -658,8 +780,9 @@ const appState = {
     saveToLocalStorage() {
         try {
             const payload = {
-                version: '4.0',
+                version: '5.1',
                 activePresetId: this.activePresetId,
+                customLabConfig: this.customLabConfig || { title: '', rules: [] },
                 devices: this.devices,
                 cables: this.cables,
                 counters: this.counters
@@ -679,6 +802,7 @@ const appState = {
             this.devices = data.devices;
             this.cables = data.cables || [];
             this.activePresetId = data.activePresetId || 'subnets';
+            this.customLabConfig = data.customLabConfig || { title: '', rules: [] };
             this.counters = data.counters || { router: 0, switch: 0, pc: 1, server: 1, cloud: 1 };
             this.selectedDeviceId = this.devices[0]?.id || null;
             this.renderAll();
@@ -690,9 +814,10 @@ const appState = {
 
     exportLabJson() {
         const payload = {
-            version: '4.0',
+            version: '5.1',
             exportedAt: new Date().toISOString(),
             activePresetId: this.activePresetId,
+            customLabConfig: this.customLabConfig || { title: '', rules: [] },
             devices: this.devices,
             cables: this.cables,
             counters: this.counters
@@ -710,6 +835,7 @@ const appState = {
             this.devices = data.devices;
             this.cables = data.cables;
             this.activePresetId = data.activePresetId || 'custom';
+            this.customLabConfig = data.customLabConfig || { title: '', rules: [] };
             this.counters = data.counters || { router: 0, switch: 0, pc: 1, server: 1, cloud: 1 };
             this.selectedDeviceId = null;
             this.saveToLocalStorage();

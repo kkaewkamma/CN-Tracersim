@@ -805,7 +805,7 @@ const ModalController = {
         `;
     },
 
-    // ================= PKA AUTO-GRADER & SCORE REPORT MODAL =================
+    // ================= PKA AUTO-GRADER & LAB EDITOR MODAL =================
     openGraderModal() {
         const report = window.appState.evaluateLabGrade();
         const scoreEl = document.getElementById('graderScoreNumber');
@@ -819,22 +819,79 @@ const ModalController = {
         if (titleEl) titleEl.textContent = report.title;
         if (listEl) {
             listEl.innerHTML = '';
-            report.checks.forEach(c => {
+            report.checks.forEach((c, idx) => {
                 const row = document.createElement('div');
-                row.className = `p-3 rounded-2xl border font-mono text-xs flex items-center justify-between ${
+                row.className = `p-3 rounded-2xl border font-mono text-xs flex flex-col gap-1 ${
                     c.passed
                         ? 'bg-emerald-950/25 border-emerald-500/30 text-emerald-300'
                         : 'bg-rose-950/25 border-rose-500/30 text-rose-300'
                 }`;
                 row.innerHTML = `
-                    <span>${c.passed ? '✅' : '❌'} ${c.label}</span>
-                    <span class="font-bold">${c.passed ? '+Pass' : 'Pending'}</span>
+                    <div class="flex items-center justify-between gap-2">
+                        <span>${c.passed ? '✅' : '❌'} ${c.label}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-bold">${c.passed ? '+Pass' : 'Pending'}</span>
+                            ${c.isCustom ? `<button onclick="ModalController.removeCustomGraderRule(${idx})" class="text-[10px] text-rose-400 hover:text-rose-200 underline">ลบ</button>` : ''}
+                        </div>
+                    </div>
+                    ${c.reason ? `<div class="text-[11px] ${c.passed ? 'text-emerald-400/80' : 'text-amber-300/90'} pl-5">💡 ${c.reason}</div>` : ''}
                 `;
                 listEl.appendChild(row);
             });
         }
 
+        // Populate Lab Editor device selectors
+        const srcSel = document.getElementById('customRuleSrc');
+        const dstSel = document.getElementById('customRuleDst');
+        const titleInput = document.getElementById('customLabTitleInput');
+        if (titleInput) {
+            titleInput.value = window.appState.customLabConfig?.title || '';
+        }
+        if (srcSel && dstSel) {
+            const opts = window.appState.devices.map(d => `<option value="${d.name}">${d.name} (${d.type.toUpperCase()})</option>`).join('');
+            srcSel.innerHTML = opts;
+            dstSel.innerHTML = opts;
+            if (window.appState.devices.length > 1) {
+                dstSel.selectedIndex = window.appState.devices.length - 1;
+            }
+        }
+
         document.getElementById('graderModal').classList.remove('hidden');
+    },
+
+    saveCustomLabTitle(val) {
+        window.appState.customLabConfig = window.appState.customLabConfig || { title: '', rules: [] };
+        window.appState.customLabConfig.title = (val || '').trim();
+        window.appState.saveToLocalStorage();
+        this.openGraderModal();
+    },
+
+    addCustomGraderRule() {
+        const type = document.getElementById('customRuleType')?.value || 'ping_pass';
+        const src = document.getElementById('customRuleSrc')?.value || '';
+        const dst = document.getElementById('customRuleDst')?.value || '';
+        if (!src) return;
+
+        window.appState.customLabConfig = window.appState.customLabConfig || { title: 'Custom Network Lab', rules: [] };
+        window.appState.customLabConfig.rules.push({ type, src, dst });
+        window.appState.saveToLocalStorage();
+        window.appState.updateLiveGradeBadge();
+        this.openGraderModal();
+    },
+
+    removeCustomGraderRule(idx) {
+        if (!window.appState.customLabConfig?.rules) return;
+        window.appState.customLabConfig.rules.splice(idx, 1);
+        window.appState.saveToLocalStorage();
+        window.appState.updateLiveGradeBadge();
+        this.openGraderModal();
+    },
+
+    clearCustomGraderRules() {
+        window.appState.customLabConfig = { title: '', rules: [] };
+        window.appState.saveToLocalStorage();
+        window.appState.updateLiveGradeBadge();
+        this.openGraderModal();
     },
 
     closeGraderModal() {
