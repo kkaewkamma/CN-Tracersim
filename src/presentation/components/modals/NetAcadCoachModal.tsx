@@ -173,23 +173,25 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                 </div>
 
                 {/* Scope */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                      <ShieldCheck size={14} />
-                      <span>Authentic Simulation (ตรงตามจริง)</span>
+                {selectedLesson.simScope && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                      <div className="font-bold text-emerald-400 flex items-center gap-1.5">
+                        <ShieldCheck size={14} />
+                        <span>Authentic Simulation (ตรงตามจริง)</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.authentic}</p>
                     </div>
-                    <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.authentic}</p>
-                  </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                    <div className="font-bold text-sky-400 flex items-center gap-1.5">
-                      <Zap size={14} />
-                      <span>Simplified Scope (เพื่อการเรียนรู้)</span>
+                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                      <div className="font-bold text-sky-400 flex items-center gap-1.5">
+                        <Zap size={14} />
+                        <span>Simplified Scope (เพื่อการเรียนรู้)</span>
+                      </div>
+                      <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.simplified}</p>
                     </div>
-                    <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.simplified}</p>
                   </div>
-                </div>
+                )}
 
                 {/* Exam Tips */}
                 <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">

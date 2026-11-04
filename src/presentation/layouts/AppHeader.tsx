@@ -1,17 +1,16 @@
 import React, { useMemo } from 'react';
 import { useTopologyStore } from '@application/stores/useTopologyStore';
-import { useSessionStore, ActiveTool } from '@application/stores/useSessionStore';
+import { useSessionStore } from '@application/stores/useSessionStore';
 import { LabGraderService } from '@application/services/grader-service';
 import { CNLogo } from '../components/common/CNLogo';
 import { 
-  MousePointer, Cable, Mail, Globe, Trash2, 
   Play, Pause, Award, Calculator, Layers, FileJson, 
   CheckCircle2, AlertCircle, Activity
 } from 'lucide-react';
 
 export const AppHeader: React.FC = () => {
   const { devices, cables, activePresetId } = useTopologyStore();
-  const { currentTool, setTool, simMode, setSimMode, openModal } = useSessionStore();
+  const { simMode, setSimMode, openModal } = useSessionStore();
 
   // Dynamically calculate live grading score
   const gradeReport = useMemo(() => {
@@ -19,14 +18,6 @@ export const AppHeader: React.FC = () => {
   }, [devices, cables, activePresetId]);
 
   const isComplete = gradeReport.percent === 100;
-
-  const tools: Array<{ id: ActiveTool; label: string; icon: React.ReactNode; color: string }> = [
-    { id: 'select', label: 'เลือก/ย้าย', icon: <MousePointer size={14} />, color: 'text-cyan-300' },
-    { id: 'cable', label: 'ต่อสาย', icon: <Cable size={14} />, color: 'text-emerald-300' },
-    { id: 'packet', label: 'Ping (ICMP)', icon: <Mail size={14} />, color: 'text-sky-300' },
-    { id: 'http', label: 'HTTP (Web)', icon: <Globe size={14} />, color: 'text-purple-300' },
-    { id: 'delete', label: 'ลบ', icon: <Trash2 size={14} />, color: 'text-rose-400' }
-  ];
 
   return (
     <header className="h-14 px-3 sm:px-4 bg-[#0a0f18] border-b border-cisco-border flex items-center justify-between z-30 select-none shadow-md">
@@ -72,27 +63,6 @@ export const AppHeader: React.FC = () => {
           {isComplete ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
           <span>Score: {gradeReport.percent}%</span>
         </button>
-      </div>
-
-      {/* Floating Toolbar in Center */}
-      <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-inner">
-        {tools.map(t => {
-          const isActive = currentTool === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTool(t.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
-                isActive 
-                  ? 'bg-slate-800 text-white shadow-sm border border-slate-700' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span className={isActive ? t.color : ''}>{t.icon}</span>
-              <span className="hidden sm:inline">{t.label}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* Actions & Modules */}
@@ -141,19 +111,10 @@ export const AppHeader: React.FC = () => {
           <span className="hidden lg:inline">Subnet</span>
         </button>
 
-        {/* Legacy Mode Link */}
-        <a
-          href="./legacy/index.html"
-          className="px-2 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-mono border border-slate-800 transition hidden sm:inline"
-          title="สลับไปยังโหมด Legacy Canvas"
-        >
-          Legacy
-        </a>
-
         {/* NetAcad Academy Modal */}
         <button
           onClick={() => openModal('academy')}
-          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 text-xs font-bold shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 transition active:scale-95"
+          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 text-xs font-bold shadow-lg shadow-cyan-500/20 flex items-center gap-1.5 transition active:scale-95"
         >
           <Award size={15} />
           <span>NetAcad</span>

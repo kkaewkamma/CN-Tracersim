@@ -5,7 +5,7 @@ import { PacketTracer } from '../../src/core/engine/packet-tracer';
 import { IpMath } from '../../src/core/engine/ip-math';
 import { LabGraderService } from '../../src/application/services/grader-service';
 import { CCNA_ASSESSMENT_QUESTIONS } from '../../src/core/curriculum/assessment-data';
-import { PRACTICAL_LABS_CATALOG } from '../../src/core/curriculum/syllabus-data';
+import { PRACTICAL_LABS_CATALOG, NETACAD_LESSONS } from '../../src/core/curriculum/syllabus-data';
 
 describe('Real-World Usage & End-to-End System Integration Tests', () => {
   beforeEach(() => {
@@ -272,7 +272,8 @@ describe('Real-World Usage & End-to-End System Integration Tests', () => {
       expect(q.cliRef).toBeTruthy();
     });
 
-    expect(PRACTICAL_LABS_CATALOG.length).toBeGreaterThanOrEqual(2);
+    expect(PRACTICAL_LABS_CATALOG.length).toBe(12);
+    expect(NETACAD_LESSONS.length).toBe(15);
     const lab1 = PRACTICAL_LABS_CATALOG.find(l => l.id === 'lab1')!;
     expect(lab1.objectives.length).toBeGreaterThan(0);
     expect(lab1.procedure.length).toBeGreaterThan(0);
