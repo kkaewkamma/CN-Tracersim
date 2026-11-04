@@ -151,3 +151,4 @@ describe('LabGraderService Integration Suite', () => {
     expect(reportFixed.percent).toBe(100);
   });
 });
+

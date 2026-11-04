@@ -1,6 +1,32 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build Outputs (Leave dist if intentionally tracked for GitHub Pages or static hosting)
+# dist/
+
+# Testing & Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Environment & Local Secrets
+.env
+.env.local
+.env.*.local
+
+# Editor & OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .DS_Store
 Thumbs.db
-node_modules/
-.vscode/
-.idea/
-
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

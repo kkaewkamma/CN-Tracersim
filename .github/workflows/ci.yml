@@ -1,0 +1,38 @@
+name: CN-Tracersim CI & Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Dual-Test Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Check & Vite Production Build
+        run: npm run build
+
+      - name: Run Vitest Modern Test Suites (18 Tests)
+        run: npm test
+
+      - name: Run Legacy Verification Test Suite (20 Tests)
+        run: npm run test:legacy

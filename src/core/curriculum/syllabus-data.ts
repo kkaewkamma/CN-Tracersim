@@ -186,3 +186,4 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
     hintsAndSolution: 'คำใบ้: การสื่อสารระดับ IP ต้องมีเส้นทางทั้งขาไปและขากลับเสมอ'
   }
 ];
+
