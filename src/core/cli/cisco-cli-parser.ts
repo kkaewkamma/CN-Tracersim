@@ -44,7 +44,7 @@ export class CiscoCliStateMachine {
 
   public autocomplete(partial: string): string[] {
     const common = [
-      'enable', 'disable', 'configure terminal', 
+      'enable', 'disable', 'configure terminal', 'show',
       'show ip interface brief', 'show ip route', 'show vlan brief', 'show running-config', 'show ip nat translations',
       'interface GigabitEthernet0/0', 'interface GigabitEthernet0/1', 'interface FastEthernet0/1',
       'ip address', 'no shutdown', 'shutdown',
@@ -121,9 +121,10 @@ export class CiscoCliStateMachine {
       }
 
       // interface selection
-      const ifMatch = cmd.match(/^int(erface)?\s+([A-Za-z0-9/._-]+)$/i);
+      const ifMatch = cmd.match(/^int(erface)?\s+([A-Za-z]+)\s*([0-9/._-]+)$/i) || cmd.match(/^int(erface)?\s+([A-Za-z0-9/._-]+)$/i);
       if (ifMatch) {
-        const portName = this.normalizeInterfaceName(ifMatch[2]);
+        const rawPort = ifMatch[3] ? `${ifMatch[2]}${ifMatch[3]}` : ifMatch[2];
+        const portName = this.normalizeInterfaceName(rawPort);
         this.context.mode = 'interface';
         this.context.currentInterface = portName;
         if (!this.device.ports[portName]) {
