@@ -194,13 +194,158 @@ const NetworkEngine = {
     isInterfaceUp(dev, portName) {
         if (!dev || !dev.ports) return false;
         const pObj = dev.ports[portName];
-        if (!pObj || !pObj.up) return false;
+        if (!pObj || !pObj.up || pObj.errDisabled) return false;
         const baseName = this.getBasePortName(portName);
         if (baseName !== portName) {
             const baseObj = dev.ports[baseName];
-            if (baseObj && !baseObj.up) return false;
+            if (baseObj && (!baseObj.up || baseObj.errDisabled)) return false;
         }
         return true;
+    },
+
+    /**
+     * =========================================================================
+     * CISCO IOS SWITCH PORT SECURITY ENGINE (CCNA SRWE Module 11)
+     * =========================================================================
+     * Evaluates Switch Port Security on ingress frames:
+     * - Supports `switchport port-security`, `maximum <1-32>`, `mac-address <mac|sticky>`,
+     *   and `violation <protect|restrict|shutdown>`
+     * - Automatically learns Sticky/Dynamic secure MACs up to `maximum`
+     * - On violation:
+     *   * `protect`  : Drops frame silently (does not increment violation counter)
+     *   * `restrict` : Drops frame and increments `violationCount` (Syslog/SNMP trap)
+     *   * `shutdown` : Places port into `err-disabled` state (`up = false`, `errDisabled = true`)
+     */
+    checkSwitchPortSecurity(swDev, portName, srcMac) {
+        if (!swDev || swDev.type !== 'switch' || !portName) {
+            return { allowed: true };
+        }
+        const pObj = swDev.ports?.[portName];
+        if (!pObj) return { allowed: true };
+
+        if (pObj.errDisabled) {
+            return {
+                allowed: false,
+                errDisabled: true,
+                violationMode: pObj.portSecurity?.violation || 'shutdown',
+                reason: `🔒 Port Security Error-Disabled: พอร์ต ${portName} บน ${swDev.name} อยู่ในสถานะ err-disabled (ต้องรัน shutdown และ no shutdown เพื่อกู้คืน)`
+            };
+        }
+
+        const ps = pObj.portSecurity;
+        if (!ps || !ps.enabled || !srcMac) {
+            return { allowed: true };
+        }
+
+        const normMac = String(srcMac).trim().toUpperCase();
+        ps.secureMacs = Array.isArray(ps.secureMacs) ? ps.secureMacs.map(m => String(m).trim().toUpperCase()) : [];
+        const maxMacs = Math.max(1, parseInt(ps.maximum, 10) || 1);
+        const violationMode = (ps.violation || 'shutdown').toLowerCase();
+
+        // Already a known secure MAC on this port
+        if (ps.secureMacs.includes(normMac)) {
+            return { allowed: true };
+        }
+
+        // Still have room under `maximum` -> dynamically / sticky learn this MAC
+        if (ps.secureMacs.length < maxMacs) {
+            ps.secureMacs.push(normMac);
+            return { allowed: true, learnedSecureMac: normMac };
+        }
+
+        // Violation triggered!
+        ps.lastViolatingMac = normMac;
+        if (violationMode === 'protect') {
+            return {
+                allowed: false,
+                errDisabled: false,
+                violationMode: 'protect',
+                reason: `🔒 Port Security Violation (Protect) บน ${swDev.name} (${portName}): ดรอปเฟรมจาก MAC ${normMac} (เกินค่า Maximum ${maxMacs})`
+            };
+        }
+
+        ps.violationCount = (ps.violationCount || 0) + 1;
+        if (violationMode === 'restrict') {
+            return {
+                allowed: false,
+                errDisabled: false,
+                violationMode: 'restrict',
+                violationCount: ps.violationCount,
+                reason: `🔒 Port Security Violation (Restrict #${ps.violationCount}) บน ${swDev.name} (${portName}): บล็อก MAC ${normMac} และแจ้งเตือน Security Trap`
+            };
+        }
+
+        // Default Cisco IOS violation mode: shutdown -> err-disabled
+        pObj.errDisabled = true;
+        pObj.up = false;
+        return {
+            allowed: false,
+            errDisabled: true,
+            violationMode: 'shutdown',
+            violationCount: ps.violationCount,
+            reason: `🔒 Port Security Violation (Shutdown -> err-disabled) บน ${swDev.name} (${portName}):ตรวจพบ MAC แปลกปลอม ${normMac} พอร์ตถูกสั่งปิดอัตโนมัติ!`
+        };
+    },
+
+    /**
+     * Checks if two switch ports on connected switches form a valid EtherChannel (LACP / PAgP / On) bundle.
+     */
+    isEtherChannelCompat(p1Obj, p2Obj) {
+        const cg1 = p1Obj?.channelGroup;
+        const cg2 = p2Obj?.channelGroup;
+        if (!cg1?.id || !cg2?.id) return false;
+        const m1 = (cg1.mode || '').toLowerCase();
+        const m2 = (cg2.mode || '').toLowerCase();
+        if (m1 === 'on' && m2 === 'on') return true;
+        if ((m1 === 'active' && (m2 === 'active' || m2 === 'passive')) ||
+            (m1 === 'passive' && m2 === 'active')) return true;
+        if ((m1 === 'desirable' && (m2 === 'desirable' || m2 === 'auto')) ||
+            (m1 === 'auto' && m2 === 'desirable')) return true;
+        return false;
+    },
+
+    getEtherChannelSummary(swDev, devices = [], cables = []) {
+        if (!swDev || swDev.type !== 'switch') return [];
+        const groups = {};
+        for (const [pName, pObj] of Object.entries(swDev.ports || {})) {
+            if (pName.toLowerCase().startsWith('port-channel')) continue;
+            if (pObj.channelGroup?.id) {
+                const gid = Number(pObj.channelGroup.id);
+                if (!groups[gid]) {
+                    groups[gid] = {
+                        groupId: gid,
+                        portChannelName: `Po${gid}`,
+                        fullPortName: `Port-channel${gid}`,
+                        protocol: pObj.channelGroup.protocol || 'LACP',
+                        mode: pObj.channelGroup.mode || 'active',
+                        members: []
+                    };
+                }
+                const cable = cables.find(c => (c.from === swDev.id && c.fromPort === pName) || (c.to === swDev.id && c.toPort === pName));
+                let flag = 'D';
+                if (this.isInterfaceUp(swDev, pName)) {
+                    if (cable) {
+                        const peerId = cable.from === swDev.id ? cable.to : cable.from;
+                        const peerPort = cable.from === swDev.id ? cable.toPort : cable.fromPort;
+                        const peerDev = devices.find(d => d.id === peerId);
+                        const peerPortObj = peerDev?.ports?.[peerPort];
+                        if (peerDev && this.isInterfaceUp(peerDev, peerPort) && this.isEtherChannelCompat(pObj, peerPortObj)) {
+                            flag = 'P';
+                        } else {
+                            flag = 'I';
+                        }
+                    } else {
+                        flag = 'I';
+                    }
+                }
+                groups[gid].members.push({ port: pName, flag });
+            }
+        }
+        return Object.values(groups).map(g => {
+            const hasBundled = g.members.some(m => m.flag === 'P');
+            g.status = hasBundled ? 'SU' : 'SD';
+            return g;
+        });
     },
 
     /**
@@ -491,9 +636,21 @@ const NetworkEngine = {
      * =========================================================================
      */
     computeStpBlockedPorts(devices, cables) {
-        // Spanning Tree Protocol (STP IEEE 802.1D) cycle breaker across Switch-to-Switch links
+        // Spanning Tree Protocol (STP IEEE 802.1D / PVST+) cycle breaker across Switch-to-Switch links
+        // Respects:
+        // 1. Bridge Priority (`sw.stpPriority`, default 32768) for Root Bridge election
+        // 2. EtherChannel bundles (`channel-group` with compatible LACP/PAgP/On modes) treated as a single logical link
         const switches = devices.filter(d => d.type === 'switch');
         if (switches.length <= 1) return new Set();
+
+        const getBridgePrio = (sw) => {
+            if (!sw) return 32768;
+            if (typeof sw.stpPriority === 'number') return sw.stpPriority;
+            if (sw.stpPriority && typeof sw.stpPriority === 'object') {
+                return Number(sw.stpPriority[1] ?? sw.stpPriority.default ?? 32768);
+            }
+            return 32768;
+        };
 
         const swIds = new Set(switches.map(s => s.id));
         const swCables = cables.filter(c => swIds.has(c.from) && swIds.has(c.to));
@@ -504,21 +661,108 @@ const NetworkEngine = {
         const find = (x) => (parent[x] === x ? x : (parent[x] = find(parent[x])));
 
         const blockedCableEndpoints = new Set();
+        const activeLogicalBundles = new Set();
+
         for (const c of swCables) {
             const s1 = devices.find(d => d.id === c.from);
             const s2 = devices.find(d => d.id === c.to);
-            if (!s1?.ports[c.fromPort]?.up || !s2?.ports[c.toPort]?.up) continue;
+            const p1 = s1?.ports?.[c.fromPort];
+            const p2 = s2?.ports?.[c.toPort];
+            if (!this.isInterfaceUp(s1, c.fromPort) || !this.isInterfaceUp(s2, c.toPort)) continue;
+
+            // Check if this cable is part of a valid EtherChannel bundle between s1 and s2
+            const isBundled = this.isEtherChannelCompat(p1, p2);
+            const pairKey = [s1.id, s2.id].sort().join('<->');
+            const bundleKey = isBundled ? `${pairKey}:Po${p1.channelGroup.id}-${p2.channelGroup.id}` : null;
+
+            if (bundleKey && activeLogicalBundles.has(bundleKey)) {
+                // Additional member link of an already-forwarding EtherChannel bundle -> DO NOT block via STP!
+                continue;
+            }
 
             const r1 = find(c.from);
             const r2 = find(c.to);
             if (r1 === r2) {
-                // Redundant L2 loop detected! STP blocks the secondary port on the higher-ID switch
-                blockedCableEndpoints.add(`${c.to}:${c.toPort}`);
+                // Redundant L2 loop detected! Block the port on the switch with the higher Bridge Priority (or higher ID)
+                const prio1 = getBridgePrio(s1);
+                const prio2 = getBridgePrio(s2);
+                if (prio1 > prio2) {
+                    blockedCableEndpoints.add(`${c.from}:${c.fromPort}`);
+                } else {
+                    blockedCableEndpoints.add(`${c.to}:${c.toPort}`);
+                }
             } else {
                 parent[r2] = r1;
+                if (bundleKey) activeLogicalBundles.add(bundleKey);
             }
         }
         return blockedCableEndpoints;
+    },
+
+    getSpanningTreeInfo(swDev, devices = [], cables = [], vlanId = 1) {
+        const switches = devices.filter(d => d.type === 'switch');
+        const getPrio = (sw) => {
+            if (!sw) return 32768;
+            if (typeof sw.stpPriority === 'number') return sw.stpPriority;
+            if (sw.stpPriority && typeof sw.stpPriority === 'object') {
+                return Number(sw.stpPriority[vlanId] ?? sw.stpPriority.default ?? 32768);
+            }
+            return 32768;
+        };
+        const getBridgeMac = (sw) => {
+            if (!sw.bridgeMac) {
+                const firstPort = Object.values(sw.ports || {})[0];
+                sw.bridgeMac = firstPort?.mac || this.generateMac('switch');
+            }
+            return sw.bridgeMac;
+        };
+
+        const sortedSwitches = [...switches].sort((a, b) => {
+            const pa = getPrio(a);
+            const pb = getPrio(b);
+            if (pa !== pb) return pa - pb;
+            return String(a.id).localeCompare(String(b.id));
+        });
+
+        const rootSw = sortedSwitches[0] || swDev;
+        const isRoot = rootSw.id === swDev.id;
+        const blockedSet = this.computeStpBlockedPorts(devices, cables);
+
+        const interfaces = [];
+        for (const [pName, pObj] of Object.entries(swDev.ports || {})) {
+            if (pObj.isSvi || !this.isInterfaceUp(swDev, pName)) continue;
+            const isBlocked = blockedSet.has(`${swDev.id}:${pName}`);
+            const role = isBlocked ? 'Altn' : (isRoot ? 'Desg' : (pObj.mode === 'trunk' ? 'Root' : 'Desg'));
+            const status = isBlocked ? 'BLK' : 'FWD';
+            const cost = pName.toLowerCase().startsWith('fa') ? 19 : (pName.toLowerCase().startsWith('po') ? 3 : 4);
+            const type = pObj.portfast ? 'P2p Edge (PortFast)' : 'P2p';
+            interfaces.push({
+                port: pName,
+                role,
+                status,
+                cost,
+                prioNbr: '128.1',
+                type
+            });
+        }
+
+        return {
+            vlanId,
+            protocol: swDev.stpMode || 'ieee (PVST+)',
+            isRoot,
+            rootBridge: {
+                priority: getPrio(rootSw) + Number(vlanId),
+                basePriority: getPrio(rootSw),
+                mac: getBridgeMac(rootSw),
+                name: rootSw.name
+            },
+            bridgeId: {
+                priority: getPrio(swDev) + Number(vlanId),
+                basePriority: getPrio(swDev),
+                mac: getBridgeMac(swDev)
+            },
+            interfaces
+        };
     },
 
     recordSwitchMacLearning(l2Detailed, srcMac, devices) {
@@ -558,7 +802,7 @@ const NetworkEngine = {
         };
     },
 
-    findL2PathDetailed(startDevId, targetDevId, devices, cables, requiredVlan = null, visited = new Set(), stpBlocked = null) {
+    findL2PathDetailed(startDevId, targetDevId, devices, cables, requiredVlan = null, visited = new Set(), stpBlocked = null, srcMac = null) {
         if (startDevId === targetDevId) return [{ devId: startDevId, inPort: null, outPort: null, vlan: requiredVlan || 1 }];
         visited.add(startDevId);
 
@@ -568,9 +812,9 @@ const NetworkEngine = {
 
         const connectedCables = cables.filter(c => {
             if (c.from === startDevId) {
-                return currentDev.ports[c.fromPort]?.up;
+                return this.isInterfaceUp(currentDev, c.fromPort);
             } else if (c.to === startDevId) {
-                return currentDev.ports[c.toPort]?.up;
+                return this.isInterfaceUp(currentDev, c.toPort);
             }
             return false;
         });
@@ -581,7 +825,27 @@ const NetworkEngine = {
             const nextPhysPort = cable.from === startDevId ? cable.toPort : cable.fromPort;
             const nextDev = devices.find(d => d.id === nextDevId);
 
-            if (!nextDev || !nextDev.ports[nextPhysPort]?.up || visited.has(nextDevId)) continue;
+            if (!nextDev || visited.has(nextDevId)) continue;
+
+            // Check Switch Port Security on ingress switch port (even if already err-disabled so we record the diagnostic reason)
+            if (nextDev.type === 'switch') {
+                const nextSwPort = nextDev.ports?.[nextPhysPort];
+                if (nextSwPort && (nextSwPort.errDisabled || nextSwPort.portSecurity?.enabled)) {
+                    let effectiveSrcMac = srcMac;
+                    if (!effectiveSrcMac && currentDev.type !== 'switch') {
+                        const p = currentDev.ports?.[myPhysPort] || Object.values(currentDev.ports || {})[0];
+                        if (p && !p.mac) p.mac = this.generateMac(currentDev.type);
+                        effectiveSrcMac = p?.mac || null;
+                    }
+                    const secRes = this.checkSwitchPortSecurity(nextDev, nextPhysPort, effectiveSrcMac);
+                    if (!secRes.allowed) {
+                        this._lastPortSecurityViolation = secRes;
+                        continue;
+                    }
+                }
+            }
+
+            if (!this.isInterfaceUp(nextDev, nextPhysPort)) continue;
 
             // Enforce STP Port Blocking on redundant Switch links
             if (blockedSet.has(`${startDevId}:${myPhysPort}`) || blockedSet.has(`${nextDevId}:${nextPhysPort}`)) {
@@ -656,7 +920,12 @@ const NetworkEngine = {
             }
 
             if (nextDev.type === 'switch') {
-                const subPath = this.findL2PathDetailed(nextDevId, targetDevId, devices, cables, nextVlan, new Set(visited), blockedSet);
+                let effectiveSrcMac = srcMac;
+                if (!effectiveSrcMac && currentDev.type !== 'switch') {
+                    const p = currentDev.ports?.[myPhysPort] || Object.values(currentDev.ports || {})[0];
+                    effectiveSrcMac = p?.mac || null;
+                }
+                const subPath = this.findL2PathDetailed(nextDevId, targetDevId, devices, cables, nextVlan, new Set(visited), blockedSet, effectiveSrcMac);
                 if (subPath) {
                     subPath[0].inPort = nextPhysPort;
                     return [
@@ -1034,15 +1303,19 @@ const NetworkEngine = {
 
         let currentRouter = null;
         let currentRouterIngressPort = null;
+        this._lastPortSecurityViolation = null;
 
         if (!this.isL3Device(srcDev)) {
             const dstOwnsActiveDstIp = Object.values(dstDev.ports || {}).some(p => p.ip === activeDstIp);
             if (this.isSameSubnet(activeSrcIp, activeDstIp, srcMask) && dstOwnsActiveDstIp) {
                 const l2Detailed = this.findL2PathDetailed(srcDev.id, dstDev.id, devices, cables, null);
                 if (!l2Detailed) {
+                    const psReason = this._lastPortSecurityViolation?.reason;
                     return {
                         success: false,
-                        reason: `Request timed out: ไม่พบสายสัญญาณ L2 หรืออยู่คนละ VLAN ไปยัง ${dstDev.name}`,
+                        portSecurityBlocked: !!this._lastPortSecurityViolation,
+                        errDisabled: !!this._lastPortSecurityViolation?.errDisabled,
+                        reason: psReason || `Request timed out: ไม่พบสายสัญญาณ L2 หรืออยู่คนละ VLAN ไปยัง ${dstDev.name}`,
                         hops: hopsIds.map(id => devices.find(d => d.id === id)),
                         routerHopIps,
                         osiSteps,
@@ -1084,9 +1357,12 @@ const NetworkEngine = {
 
             const gwTarget = this.findDeviceByIpOnL2(srcDev, srcPortName, nextHopIpToResolve, devices, cables);
             if (!gwTarget || !this.isL3Device(gwTarget.device)) {
+                const psReason = this._lastPortSecurityViolation?.reason;
                 return {
                     success: false,
-                    reason: `${srcDev.name}: ไม่สามารถติดต่อ Default Gateway (${srcDev.gateway}) ได้`,
+                    portSecurityBlocked: !!this._lastPortSecurityViolation,
+                    errDisabled: !!this._lastPortSecurityViolation?.errDisabled,
+                    reason: psReason || `${srcDev.name}: ไม่สามารถติดต่อ Default Gateway (${srcDev.gateway}) ได้`,
                     hops: hopsIds.map(id => devices.find(d => d.id === id)),
                     routerHopIps,
                     osiSteps,

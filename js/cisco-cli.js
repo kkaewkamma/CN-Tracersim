@@ -87,6 +87,9 @@ class CiscoCLI {
                 chips.push(
                     { label: 'show vlan br', cmd: 'show vlan brief', run: true },
                     { label: 'show int trunk', cmd: 'show interfaces trunk', run: true },
+                    { label: 'show spanning-tree', cmd: 'show spanning-tree', run: true },
+                    { label: 'show port-security', cmd: 'show port-security', run: true },
+                    { label: 'show etherchannel', cmd: 'show etherchannel summary', run: true },
                     { label: 'show mac address-table', cmd: 'show mac address-table', run: true }
                 );
             }
@@ -152,7 +155,9 @@ class CiscoCLI {
                     { label: 'mode access', cmd: 'switchport mode access', run: true },
                     { label: 'vlan 10', cmd: 'switchport access vlan 10', run: true },
                     { label: 'vlan 20', cmd: 'switchport access vlan 20', run: true },
-                    { label: 'native vlan 99', cmd: 'switchport trunk native vlan 99', run: true }
+                    { label: 'native vlan 99', cmd: 'switchport trunk native vlan 99', run: true },
+                    { label: 'port-security', cmd: 'switchport port-security', run: true },
+                    { label: 'channel-group 1', cmd: 'channel-group 1 mode active', run: true }
                 );
             } else {
                 if (isSubIf) {
@@ -216,12 +221,14 @@ class CiscoCLI {
             'privileged': [
                 'configure terminal', 'show ip interface brief', 'show ipv6 interface brief', 'show ip route', 'show access-lists',
                 'show ip nat translations', 'show ip ospf neighbor', 'show ip arp', 'show ip dhcp binding', 'show ip dhcp pool',
-                'show running-config', 'show vlan brief', 'show interfaces trunk', 'show mac address-table', 'ping ', 'http ',
+                'show running-config', 'show vlan brief', 'show interfaces trunk', 'show mac address-table', 'show spanning-tree',
+                'show port-security', 'show etherchannel summary', 'ping ', 'http ',
                 'traceroute ', 'clear arp-cache', 'clear ip nat translations *', 'write', 'disable', 'clear', 'exit'
             ],
             'config': [
-                'interface ', 'interface vlan ', 'vlan ', 'hostname ', 'enable secret ', 'service password-encryption',
+                'interface ', 'interface vlan ', 'interface port-channel ', 'interface range ', 'vlan ', 'hostname ', 'enable secret ', 'service password-encryption',
                 'banner motd #Authorized Access Only#', 'line console 0', 'line vty 0 4', 'crypto key generate rsa',
+                'spanning-tree mode rapid-pvst', 'spanning-tree vlan 1 root primary', 'spanning-tree vlan 1 priority ',
                 'ip routing', 'ipv6 unicast-routing', 'ip route ', 'no ip route ', 'ip default-gateway ',
                 'ip dhcp excluded-address ', 'ip dhcp pool ', 'router ospf 1', 'access-list 100 ',
                 'ip nat inside source static ', 'ip nat inside source list 1 interface Gig0/1 overload', 'exit', 'end'
@@ -232,7 +239,10 @@ class CiscoCLI {
                 'ip address ', 'ip address dhcp', 'ipv6 address ', 'ipv6 address autoconfig',
                 'ip nat inside', 'ip nat outside', 'ip access-group 100 in', 'ip ospf cost ',
                 'encapsulation dot1Q ', 'switchport mode trunk', 'switchport mode access',
-                'switchport access vlan ', 'switchport trunk native vlan ', 'no shutdown', 'shutdown', 'exit', 'end'
+                'switchport access vlan ', 'switchport trunk native vlan ', 'switchport port-security',
+                'switchport port-security maximum ', 'switchport port-security mac-address sticky',
+                'switchport port-security violation ', 'channel-group 1 mode active',
+                'spanning-tree portfast', 'spanning-tree bpduguard enable', 'no shutdown', 'shutdown', 'exit', 'end'
             ],
             'config-router': [
                 'network ', 'no network ', 'router-id ', 'exit', 'end'
@@ -414,16 +424,18 @@ class CiscoCLI {
 
         // Cisco IOS Sub-Configuration Mode Automatic Transition:
         // Allows typing `interface ...`, `router ospf ...`, `vlan ...`, `line ...`, `access-list ...`,
-        // `ip route ...`, `ip dhcp ...`, or `ip nat inside source ...` directly from any config-* sub-mode!
+        // `ip route ...`, `ip dhcp ...`, `spanning-tree vlan ...`, or `ip nat inside source ...` directly from any config-* sub-mode!
         if (['config-if', 'config-vlan', 'config-line', 'config-router', 'config-dhcp'].includes(this.device.cliMode)) {
             const isGlobalTransition =
                 cmd === 'interface' || cmd === 'int' ||
                 cmd === 'vlan' || cmd === 'line' || cmd === 'router' ||
                 cmd === 'hostname' || cmd === 'access-list' ||
+                (cmd === 'spanning-tree' && (arg1 === 'vlan' || arg1 === 'mode')) ||
                 (cmd === 'ip' && (arg1 === 'route' || arg1 === 'dhcp' || arg1 === 'default-gateway' || (arg1 === 'nat' && arg2 === 'inside' && arg3 === 'source')));
             if (isGlobalTransition) {
                 this.device.cliMode = 'config';
                 this.device.cliCurrentIf = null;
+                this.device.cliCurrentIfRange = null;
                 this.device.cliCurrentDhcpPool = null;
             }
         }
@@ -562,10 +574,102 @@ class CiscoCLI {
                 if (this.onStateChange) this.onStateChange();
                 return `%IPV6-6-ENABLED: IPv6 Unicast Routing enabled on ${this.device.name}`;
             }
-            // Interface / Sub-interface / SVI (interface vlan X)
+            // Spanning Tree Protocol (STP / Rapid-PVST+): spanning-tree mode / vlan <id> priority / root
+            if (cmd === 'spanning-tree' || cmd === 'sp') {
+                if (this.device.type !== 'switch') return '% Spanning-tree configuration is only supported on Switches.';
+                if (arg1 === 'mode') {
+                    this.device.stpMode = tokens[2] || 'rapid-pvst';
+                    if (this.onStateChange) this.onStateChange();
+                    return `%STP-6-MODE: Spanning-tree mode set to ${this.device.stpMode}`;
+                }
+                if (arg1 === 'vlan') {
+                    const vId = parseInt(tokens[2], 10) || 1;
+                    const subCmd = (tokens[3] || '').toLowerCase();
+                    this.device.stpPriority = (this.device.stpPriority && typeof this.device.stpPriority === 'object')
+                        ? this.device.stpPriority
+                        : { default: 32768 };
+                    if (subCmd === 'priority') {
+                        const prio = parseInt(tokens[4], 10);
+                        if (isNaN(prio) || prio < 0 || prio > 61440 || prio % 4096 !== 0) {
+                            return '% Bridge Priority must be in increments of 4096 (0, 4096, 8192, ..., 24576, 28672, 32768, ... 61440).';
+                        }
+                        this.device.stpPriority[vId] = prio;
+                        this.device.stpPriority.default = prio;
+                        if (this.onStateChange) this.onStateChange();
+                        return `%STP-6-PRIORITY: VLAN ${vId} bridge priority set to ${prio}`;
+                    }
+                    if (subCmd === 'root') {
+                        const role = (tokens[4] || 'primary').toLowerCase();
+                        const prio = role === 'secondary' ? 28672 : 24576;
+                        this.device.stpPriority[vId] = prio;
+                        this.device.stpPriority.default = prio;
+                        if (this.onStateChange) this.onStateChange();
+                        return `%STP-6-ROOT: ${this.device.name} configured as STP Root ${role.toUpperCase()} (Priority ${prio}) for VLAN ${vId}`;
+                    }
+                    return '% Usage: spanning-tree vlan <id> <priority <0-61440> | root primary | root secondary>';
+                }
+                return '% Usage: spanning-tree mode <pvst|rapid-pvst> or spanning-tree vlan <id> root primary';
+            }
+            // Interface / Sub-interface / SVI (interface vlan X) / Port-channel / Interface Range
             if (cmd === 'interface' || cmd === 'int') {
-                if (!tokens[1]) return '% Incomplete command. Usage: interface <Gig0/0 | Gig0/0.10 | Fa0/1 | vlan 10>';
+                if (!tokens[1]) return '% Incomplete command. Usage: interface <Gig0/0 | Gig0/0.10 | Fa0/1 | vlan 10 | port-channel 1 | range Fa0/1 - 2>';
+                this.device.cliCurrentIfRange = null;
+
+                // Handle Interface Range: interface range Fa0/1 - 2
+                if (arg1 === 'range') {
+                    const rangeStr = tokens.slice(2).join('').replace(/\s+/g, '');
+                    const dashMatch = rangeStr.match(/^([a-zA-Z]+\d+\/)(\d+)-(\d+)$/);
+                    const matchedList = [];
+                    if (dashMatch) {
+                        const prefix = dashMatch[1];
+                        const startNum = parseInt(dashMatch[2], 10);
+                        const endNum = parseInt(dashMatch[3], 10);
+                        for (let n = Math.min(startNum, endNum); n <= Math.max(startNum, endNum); n++) {
+                            const found = this.findMatchingPort(`${prefix}${n}`);
+                            if (found) matchedList.push(found);
+                        }
+                    } else {
+                        rangeStr.split(',').forEach(part => {
+                            const found = this.findMatchingPort(part);
+                            if (found) matchedList.push(found);
+                        });
+                    }
+                    if (matchedList.length === 0) {
+                        return `% Invalid interface range. Available: ${Object.keys(this.device.ports).join(', ')}`;
+                    }
+                    this.device.cliMode = 'config-if';
+                    this.device.cliCurrentIf = matchedList[0];
+                    this.device.cliCurrentIfRange = matchedList;
+                    return '';
+                }
+
                 const rawIf = tokens.slice(1).join('');
+
+                // Handle EtherChannel logical interface: interface port-channel <1-6> or int po1
+                if (rawIf.toLowerCase().startsWith('port-channel') || /^po\d+$/i.test(rawIf)) {
+                    if (this.device.type !== 'switch') return '% Port-channel interfaces are only supported on Switches.';
+                    const poNum = parseInt(rawIf.replace(/^(port-channel|po)/i, ''), 10);
+                    if (isNaN(poNum) || poNum < 1 || poNum > 6) {
+                        return '% Invalid Port-channel number. Specify 1-6 (e.g. interface port-channel 1)';
+                    }
+                    const poName = `Port-channel${poNum}`;
+                    if (!this.device.ports[poName]) {
+                        this.device.ports[poName] = {
+                            ip: '',
+                            mask: '255.255.255.0',
+                            up: true,
+                            vlan: 1,
+                            mode: 'access',
+                            isPortChannel: true,
+                            channelGroupId: poNum,
+                            mac: NetworkEngine.generateMac('switch')
+                        };
+                    }
+                    this.device.cliMode = 'config-if';
+                    this.device.cliCurrentIf = poName;
+                    if (this.onStateChange) this.onStateChange();
+                    return `%LINEPROTO-5-UPDOWN: Line protocol on Interface ${poName}, changed state to up`;
+                }
 
                 // Handle SVI: interface vlan <id>
                 if (rawIf.toLowerCase().startsWith('vlan')) {
@@ -1081,17 +1185,167 @@ class CiscoCLI {
                 if (this.onStateChange) this.onStateChange();
                 return `% 802.1Q VLAN tagging set to VLAN ${vlanId} on ${currentPort}`;
             }
+            // Helper to apply switchport / channel-group / shutdown settings across interface range or Port-channel members
+            const getTargetPortObjects = () => {
+                if (Array.isArray(this.device.cliCurrentIfRange) && this.device.cliCurrentIfRange.length > 0) {
+                    return this.device.cliCurrentIfRange.map(p => ({ name: p, obj: this.device.ports[p] })).filter(x => x.obj);
+                }
+                const list = [{ name: currentPort, obj: portObj }];
+                if (portObj?.isPortChannel && portObj.channelGroupId) {
+                    for (const [pName, p] of Object.entries(this.device.ports)) {
+                        if (!p.isPortChannel && Number(p.channelGroup?.id) === Number(portObj.channelGroupId)) {
+                            list.push({ name: pName, obj: p });
+                        }
+                    }
+                }
+                return list;
+            };
+
+            // Spanning-Tree Interface Config: spanning-tree portfast / bpduguard enable
+            if (cmd === 'spanning-tree' || cmd === 'sp') {
+                if (this.device.type !== 'switch') return '% Spanning-tree interface commands are only valid on Switch interfaces.';
+                if (arg1 === 'portfast') {
+                    getTargetPortObjects().forEach(t => { t.obj.portfast = true; });
+                    if (this.onStateChange) this.onStateChange();
+                    return `%Warning: portfast should only be enabled on ports connected to a single host.\n%STP-6-PORTFAST: PortFast enabled on ${currentPort}`;
+                }
+                if (arg1 === 'bpduguard') {
+                    getTargetPortObjects().forEach(t => { t.obj.bpduguard = (arg2 !== 'disable'); });
+                    if (this.onStateChange) this.onStateChange();
+                    return `%STP-6-BPDUGUARD: BPDU Guard ${arg2 === 'disable' ? 'disabled' : 'enabled'} on ${currentPort}`;
+                }
+                return '% Usage: spanning-tree portfast or spanning-tree bpduguard enable';
+            }
+
+            // EtherChannel Link Aggregation: channel-group <1-6> mode <active|passive|desirable|auto|on>
+            if (cmd === 'channel-group') {
+                if (this.device.type !== 'switch') return '% EtherChannel is only supported on Switch interfaces.';
+                const grpId = parseInt(tokens[1], 10);
+                const modeKw = (tokens[2] || '').toLowerCase();
+                const modeVal = (tokens[3] || '').toLowerCase();
+                const validModes = ['active', 'passive', 'desirable', 'auto', 'on'];
+                if (isNaN(grpId) || grpId < 1 || grpId > 6 || modeKw !== 'mode' || !validModes.includes(modeVal)) {
+                    return '% Usage: channel-group <1-6> mode <active | passive | desirable | auto | on>';
+                }
+                const proto = (modeVal === 'active' || modeVal === 'passive') ? 'LACP' : (modeVal === 'desirable' || modeVal === 'auto') ? 'PAgP' : 'On';
+                const poName = `Port-channel${grpId}`;
+                if (!this.device.ports[poName]) {
+                    this.device.ports[poName] = {
+                        ip: '',
+                        mask: '255.255.255.0',
+                        up: true,
+                        vlan: portObj.vlan || 1,
+                        mode: portObj.mode || 'access',
+                        isPortChannel: true,
+                        channelGroupId: grpId,
+                        mac: NetworkEngine.generateMac('switch')
+                    };
+                }
+                getTargetPortObjects().forEach(t => {
+                    if (!t.obj.isPortChannel) {
+                        t.obj.channelGroup = { id: grpId, mode: modeVal, protocol: proto };
+                    }
+                });
+                if (this.onStateChange) this.onStateChange();
+                return `Creating a port-channel interface Port-channel ${grpId}\n%EC-5-BUNDLE: Interface ${this.device.cliCurrentIfRange ? this.device.cliCurrentIfRange.join(', ') : currentPort} joined Port-channel${grpId} (${proto} mode ${modeVal})`;
+            }
+            if (cmd === 'no' && arg1 === 'channel-group') {
+                getTargetPortObjects().forEach(t => { delete t.obj.channelGroup; });
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'no' && (arg1 === 'switchport' || arg1 === 'sw') && (arg2 === 'port-security' || arg2 === 'port')) {
+                getTargetPortObjects().forEach(t => {
+                    delete t.obj.portSecurity;
+                    t.obj.errDisabled = false;
+                });
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
             if (cmd === 'switchport' || cmd === 'sw') {
                 if (this.device.type !== 'switch') {
                     return '% Switchport commands are only valid on Switch interfaces.';
                 }
+                // Switch Port Security: switchport port-security [maximum <1-32> | violation <protect|restrict|shutdown> | mac-address <sticky|H.H.H>]
+                if (arg1 === 'port-security' || arg1 === 'port') {
+                    const targets = getTargetPortObjects();
+                    for (const t of targets) {
+                        if (t.obj.mode === 'trunk') {
+                            return `% ${t.name} is a trunk port. Port security is only supported on access ports (run "switchport mode access" first).`;
+                        }
+                        t.obj.mode = 'access';
+                        t.obj.portSecurity = t.obj.portSecurity || {
+                            enabled: true,
+                            maximum: 1,
+                            violation: 'shutdown',
+                            sticky: false,
+                            secureMacs: [],
+                            violationCount: 0
+                        };
+                    }
+
+                    if (!arg2) {
+                        targets.forEach(t => { t.obj.portSecurity.enabled = true; });
+                        if (this.onStateChange) this.onStateChange();
+                        return `%PORT_SECURITY-6-ENABLED: Port Security enabled on ${currentPort}`;
+                    }
+                    if (arg2 === 'maximum' || arg2 === 'max') {
+                        const maxVal = parseInt(tokens[3], 10);
+                        if (isNaN(maxVal) || maxVal < 1 || maxVal > 32) {
+                            return '% Usage: switchport port-security maximum <1-32>';
+                        }
+                        targets.forEach(t => {
+                            t.obj.portSecurity.enabled = true;
+                            t.obj.portSecurity.maximum = maxVal;
+                        });
+                        if (this.onStateChange) this.onStateChange();
+                        return `%PORT_SECURITY-6-MAX: Max secure MAC addresses on ${currentPort} set to ${maxVal}`;
+                    }
+                    if (arg2 === 'violation' || arg2 === 'viol') {
+                        const vMode = (tokens[3] || '').toLowerCase();
+                        if (!['protect', 'restrict', 'shutdown'].includes(vMode)) {
+                            return '% Usage: switchport port-security violation <protect | restrict | shutdown>';
+                        }
+                        targets.forEach(t => {
+                            t.obj.portSecurity.enabled = true;
+                            t.obj.portSecurity.violation = vMode;
+                        });
+                        if (this.onStateChange) this.onStateChange();
+                        return `%PORT_SECURITY-6-VIOLATION: Violation mode on ${currentPort} set to ${vMode.toUpperCase()}`;
+                    }
+                    if (arg2 === 'mac-address' || arg2 === 'mac') {
+                        const macArg = (tokens[3] || '').toLowerCase();
+                        if (macArg === 'sticky') {
+                            targets.forEach(t => {
+                                t.obj.portSecurity.enabled = true;
+                                t.obj.portSecurity.sticky = true;
+                            });
+                            if (this.onStateChange) this.onStateChange();
+                            return `%PORT_SECURITY-6-STICKY: Sticky MAC learning enabled on ${currentPort}`;
+                        }
+                        const staticMac = (tokens[3] || '').toUpperCase();
+                        if (!staticMac || staticMac.length < 4) {
+                            return '% Usage: switchport port-security mac-address <sticky | H.H.H>';
+                        }
+                        targets.forEach(t => {
+                            t.obj.portSecurity.enabled = true;
+                            t.obj.portSecurity.secureMacs = t.obj.portSecurity.secureMacs || [];
+                            if (!t.obj.portSecurity.secureMacs.includes(staticMac)) {
+                                t.obj.portSecurity.secureMacs.push(staticMac);
+                            }
+                        });
+                        if (this.onStateChange) this.onStateChange();
+                        return `%PORT_SECURITY-6-STATIC_MAC: Static secure MAC ${staticMac} bound to ${currentPort}`;
+                    }
+                    return '% Usage: switchport port-security [maximum <1-32> | violation <protect|restrict|shutdown> | mac-address <sticky|H.H.H>]';
+                }
                 if (arg1 === 'mode' && (arg2 === 'trunk' || arg2 === 'tr')) {
-                    portObj.mode = 'trunk';
+                    getTargetPortObjects().forEach(t => { t.obj.mode = 'trunk'; });
                     if (this.onStateChange) this.onStateChange();
                     return `%LINEPROTO-5-UPDOWN: Interface ${currentPort} configured as 802.1Q Trunk port`;
                 }
                 if (arg1 === 'mode' && (arg2 === 'access' || arg2 === 'acc')) {
-                    portObj.mode = 'access';
+                    getTargetPortObjects().forEach(t => { t.obj.mode = 'access'; });
                     if (this.onStateChange) this.onStateChange();
                     return `% Interface ${currentPort} configured as Access port (VLAN ${portObj.vlan || 1})`;
                 }
@@ -1100,8 +1354,10 @@ class CiscoCLI {
                     if (isNaN(vlanId) || vlanId < 1 || vlanId > 4094) {
                         return '% Invalid VLAN ID. Specify a value between 1 and 4094.';
                     }
-                    portObj.mode = 'access';
-                    portObj.vlan = vlanId;
+                    getTargetPortObjects().forEach(t => {
+                        t.obj.mode = 'access';
+                        t.obj.vlan = vlanId;
+                    });
                     this.device.vlans = this.device.vlans || { 1: 'default' };
                     if (!this.device.vlans[vlanId]) {
                         this.device.vlans[vlanId] = `VLAN${String(vlanId).padStart(4, '0')}`;
@@ -1114,16 +1370,16 @@ class CiscoCLI {
                     if (isNaN(nativeId) || nativeId < 1 || nativeId > 4094) {
                         return '% Usage: switchport trunk native vlan <1-4094>';
                     }
-                    portObj.nativeVlan = nativeId;
+                    getTargetPortObjects().forEach(t => { t.obj.nativeVlan = nativeId; });
                     if (this.onStateChange) this.onStateChange();
                     return `%TRUNK-6-NATIVE: Native VLAN on ${currentPort} set to VLAN ${nativeId}`;
                 }
                 if (arg1 === 'trunk' && arg2 === 'allowed' && arg3 === 'vlan') {
-                    portObj.allowedVlans = tokens[4] || 'all';
+                    getTargetPortObjects().forEach(t => { t.obj.allowedVlans = tokens[4] || 'all'; });
                     if (this.onStateChange) this.onStateChange();
                     return '';
                 }
-                return '% Usage: switchport mode <access|trunk>, switchport access vlan <id>, or switchport trunk native vlan <id>';
+                return '% Usage: switchport mode <access|trunk>, switchport access vlan <id>, switchport trunk native vlan <id>, or switchport port-security';
             }
             if (cmd === 'ip' && (arg1 === 'address' || arg1 === 'add')) {
                 if (this.device.type === 'switch' && !portObj.isSvi) {
@@ -1159,12 +1415,17 @@ class CiscoCLI {
                 return '';
             }
             if (cmd === 'no' && (arg1 === 'shutdown' || arg1 === 'shut')) {
-                portObj.up = true;
+                getTargetPortObjects().forEach(t => {
+                    t.obj.up = true;
+                    t.obj.errDisabled = false;
+                });
                 if (this.onStateChange) this.onStateChange();
                 return `%LINK-5-CHANGED: Interface ${currentPort}, changed state to up\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ${currentPort}, changed state to up`;
             }
             if (cmd === 'shutdown' || cmd === 'shut') {
-                portObj.up = false;
+                getTargetPortObjects().forEach(t => {
+                    t.obj.up = false;
+                });
                 if (this.onStateChange) this.onStateChange();
                 return `%LINK-5-CHANGED: Interface ${currentPort}, changed state to administratively down\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ${currentPort}, changed state to down`;
             }
@@ -1309,9 +1570,102 @@ class CiscoCLI {
                 const ipPadded = ipLabel.padEnd(16, ' ');
                 const method = (pObj.dhcp ? 'DHCP  ' : 'manual');
                 const isUp = NetworkEngine.isInterfaceUp(this.device, pName);
-                const statusPadded = (isUp ? 'up' : 'administratively down').padEnd(22, ' ');
+                const statusStr = pObj.errDisabled ? 'err-disabled' : (isUp ? 'up' : 'administratively down');
+                const statusPadded = statusStr.padEnd(22, ' ');
                 const proto = isUp ? 'up' : 'down';
                 out += `${namePadded}${ipPadded}YES ${method} ${statusPadded}${proto}\n`;
+            }
+            return out.trimEnd();
+        }
+
+        // show port-security [interface <if>]
+        if (full.startsWith('port-security') || full.startsWith('port-sec')) {
+            if (this.device.type !== 'switch') {
+                return '% Port Security is only supported on Catalyst Switches.';
+            }
+            if (args[1] && (args[1].toLowerCase().startsWith('int') || this.findMatchingPort(args[1]))) {
+                const targetArg = args[1].toLowerCase().startsWith('int') ? args[2] : args[1];
+                const matchedPort = this.findMatchingPort(targetArg);
+                if (!matchedPort) return `% Invalid interface specified for show port-security.`;
+                const pObj = this.device.ports[matchedPort];
+                const ps = pObj.portSecurity || { enabled: false, maximum: 1, violation: 'shutdown', secureMacs: [], violationCount: 0 };
+                const status = pObj.errDisabled ? 'Secure-shutdown (err-disabled)' : (ps.enabled ? (pObj.up ? 'Secure-up' : 'Secure-down') : 'Disabled');
+                let out = `Port Security              : ${ps.enabled ? 'Enabled' : 'Disabled'}\n`;
+                out +=    `Port Status                : ${status}\n`;
+                out +=    `Violation Mode             : ${(ps.violation || 'shutdown').charAt(0).toUpperCase() + (ps.violation || 'shutdown').slice(1)}\n`;
+                out +=    `Maximum MAC Addresses      : ${ps.maximum || 1}\n`;
+                out +=    `Total MAC Addresses        : ${(ps.secureMacs || []).length}\n`;
+                out +=    `Sticky MAC Addresses       : ${ps.sticky ? (ps.secureMacs || []).length : 0}\n`;
+                out +=    `Last Source Address:Vlan   : ${ps.lastViolatingMac || (ps.secureMacs?.[0] || '0000.0000.0000')}:${pObj.vlan || 1}\n`;
+                out +=    `Security Violation Count   : ${ps.violationCount || 0}`;
+                return out;
+            }
+
+            const secPorts = Object.entries(this.device.ports).filter(([, p]) => p.portSecurity?.enabled);
+            if (secPorts.length === 0) {
+                return 'Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action\n             (Count)        (Count)          (Count)\n---------------------------------------------------------------------------\n(No ports have Port Security enabled — use "switchport port-security" in interface config)';
+            }
+            let out = 'Secure Port  MaxSecureAddr  CurrentAddr  SecurityViolation  Security Action\n';
+            out +=    '             (Count)        (Count)          (Count)\n';
+            out +=    '---------------------------------------------------------------------------\n';
+            for (const [pName, pObj] of secPorts) {
+                const ps = pObj.portSecurity;
+                const maxStr = String(ps.maximum || 1).padEnd(15, ' ');
+                const curStr = String((ps.secureMacs || []).length).padEnd(13, ' ');
+                const vioStr = String(ps.violationCount || 0).padEnd(19, ' ');
+                const actStr = (ps.violation || 'shutdown').charAt(0).toUpperCase() + (ps.violation || 'shutdown').slice(1) + (pObj.errDisabled ? ' (err-disabled)' : '');
+                out += `${pName.padEnd(13, ' ')}${maxStr}${curStr}${vioStr}${actStr}\n`;
+            }
+            out +=    '---------------------------------------------------------------------------';
+            return out;
+        }
+
+        // show spanning-tree
+        if (full.startsWith('spanning-tree') || full.startsWith('span')) {
+            if (this.device.type !== 'switch') {
+                return '% Spanning Tree Protocol is only active on Catalyst Switches.';
+            }
+            const stp = NetworkEngine.getSpanningTreeInfo(this.device, allDevices, allCables, 1);
+            let out = `VLAN000${stp.vlanId}\n`;
+            out += `  Spanning tree enabled protocol ${stp.protocol}\n`;
+            out += `  Root ID    Priority    ${stp.rootBridge.priority}\n`;
+            out += `             Address     ${stp.rootBridge.mac} (${stp.rootBridge.name})\n`;
+            if (stp.isRoot) {
+                out += `             This bridge is the root\n`;
+            }
+            out += `             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec\n\n`;
+            out += `  Bridge ID  Priority    ${stp.bridgeId.priority}  (priority ${stp.bridgeId.basePriority} sys-id-ext ${stp.vlanId})\n`;
+            out += `             Address     ${stp.bridgeId.mac}\n`;
+            out += `             Hello Time   2 sec  Max Age 20 sec  Forward Delay 15 sec\n\n`;
+            out += `Interface           Role Sts Cost      Prio.Nbr Type\n`;
+            out += `------------------- ---- --- --------- -------- --------------------------------\n`;
+            for (const intf of stp.interfaces) {
+                out += `${intf.port.padEnd(20, ' ')}${intf.role.padEnd(5, ' ')}${intf.status.padEnd(4, ' ')}${String(intf.cost).padEnd(10, ' ')}${intf.prioNbr.padEnd(9, ' ')}${intf.type}\n`;
+            }
+            return out.trimEnd();
+        }
+
+        // show etherchannel summary
+        if (full.startsWith('etherchannel')) {
+            if (this.device.type !== 'switch') {
+                return '% EtherChannel is only supported on Catalyst Switches.';
+            }
+            const summary = NetworkEngine.getEtherChannelSummary(this.device, allDevices, allCables);
+            let out = `Flags:  D - down        P - bundled in port-channel\n`;
+            out +=    `        I - stand-alone s - suspended\n`;
+            out +=    `        S - Layer2      U - in use\n`;
+            out +=    `Number of channel-groups in use: ${summary.length}\n\n`;
+            out +=    `Group  Port-channel  Protocol    Ports\n`;
+            out +=    `------+-------------+-----------+-----------------------------------------------\n`;
+            if (summary.length === 0) {
+                out += `(No EtherChannel bundles configured — use "channel-group 1 mode active" in interface config)`;
+                return out;
+            }
+            for (const g of summary) {
+                const poCol = `${g.portChannelName}(${g.status})`.padEnd(14, ' ');
+                const protoCol = g.protocol.padEnd(12, ' ');
+                const portsCol = g.members.map(m => `${m.port}(${m.flag})`).join(' ');
+                out += `${String(g.groupId).padEnd(7, ' ')}${poCol}${protoCol}${portsCol}\n`;
             }
             return out.trimEnd();
         }
@@ -1600,6 +1954,13 @@ class CiscoCLI {
             if (this.device.gateway) {
                 out += `ip default-gateway ${this.device.gateway}\n!\n`;
             }
+            if (this.device.type === 'switch') {
+                out += `spanning-tree mode ${this.device.stpMode || 'pvst'}\n`;
+                if (this.device.stpPriority?.default && this.device.stpPriority.default !== 32768) {
+                    out += `spanning-tree vlan 1 priority ${this.device.stpPriority.default}\n`;
+                }
+                out += `!\n`;
+            }
             for (const [pName, pObj] of Object.entries(this.device.ports)) {
                 out += `interface ${pName}\n`;
                 if (this.device.type === 'switch' && !pObj.isSvi) {
@@ -1611,6 +1972,30 @@ class CiscoCLI {
                     } else {
                         out += ` switchport mode access\n`;
                         out += ` switchport access vlan ${pObj.vlan || 1}\n`;
+                    }
+                    if (pObj.portSecurity?.enabled) {
+                        out += ` switchport port-security\n`;
+                        if (pObj.portSecurity.maximum && pObj.portSecurity.maximum !== 1) {
+                            out += ` switchport port-security maximum ${pObj.portSecurity.maximum}\n`;
+                        }
+                        if (pObj.portSecurity.violation && pObj.portSecurity.violation !== 'shutdown') {
+                            out += ` switchport port-security violation ${pObj.portSecurity.violation}\n`;
+                        }
+                        if (pObj.portSecurity.sticky) {
+                            out += ` switchport port-security mac-address sticky\n`;
+                        }
+                        (pObj.portSecurity.secureMacs || []).forEach(mac => {
+                            out += ` switchport port-security mac-address ${pObj.portSecurity.sticky ? 'sticky ' : ''}${mac}\n`;
+                        });
+                    }
+                    if (pObj.channelGroup?.id) {
+                        out += ` channel-group ${pObj.channelGroup.id} mode ${pObj.channelGroup.mode}\n`;
+                    }
+                    if (pObj.portfast) {
+                        out += ` spanning-tree portfast\n`;
+                    }
+                    if (pObj.bpduguard) {
+                        out += ` spanning-tree bpduguard enable\n`;
                     }
                 } else {
                     if (pObj.vlan && pName.includes('.')) {

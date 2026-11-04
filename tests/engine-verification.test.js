@@ -647,6 +647,175 @@ runTest('16. Service Worker (sw.js) & Offline CSS Fallback Verification', () => 
     assert.ok(cssContent.includes('.hidden { display: none !important; }'), 'style.css must include offline fallback rules');
 });
 
+// ---------------------------------------------------------------------------
+// 17. Switch Port Security (Sticky MAC, Restrict & Shutdown -> Err-Disabled)
+// ---------------------------------------------------------------------------
+runTest('17. Switch Port Security (Sticky MAC, Violation Restrict & Shutdown -> err-disabled Recovery)', () => {
+    const sw1 = makeDevice('sw1', 'switch', 'SW1-Access', {
+        'Fa0/1': { up: true, vlan: 1, mode: 'access' },
+        'Fa0/2': { up: true, vlan: 1, mode: 'access' }
+    });
+    const pc1 = makeDevice('pc1', 'pc', 'PC1', {
+        'Eth0': { ip: '192.168.1.10', mask: '255.255.255.0', up: true, mac: '0050.7966.0001' }
+    }, { mac: '0050.7966.0001' });
+    const pc2 = makeDevice('pc2', 'pc', 'PC2', {
+        'Eth0': { ip: '192.168.1.20', mask: '255.255.255.0', up: true, mac: '0050.7966.0002' }
+    }, { mac: '0050.7966.0002' });
+
+    const cables = [
+        { id: 'c1', from: 'pc1', fromPort: 'Eth0', to: 'sw1', toPort: 'Fa0/1' },
+        { id: 'c2', from: 'pc2', fromPort: 'Eth0', to: 'sw1', toPort: 'Fa0/2' }
+    ];
+    const devices = [sw1, pc1, pc2];
+    global.appState = { devices, cables, updateLiveGradeBadge: () => {}, logEvent: () => {} };
+
+    // Configure Port Security on SW1 Fa0/1 via CiscoCLI
+    const cli = new CiscoCLI(sw1);
+    cli.execute('enable');
+    cli.execute('configure terminal');
+    cli.execute('interface Fa0/1');
+    cli.execute('switchport mode access');
+    cli.execute('switchport port-security');
+    cli.execute('switchport port-security maximum 1');
+    cli.execute('switchport port-security mac-address sticky');
+    cli.execute('switchport port-security violation shutdown');
+    cli.execute('end');
+
+    // First ping from PC1 (0050.7966.0001) -> Sticky learns MAC and succeeds
+    const sim1 = NetworkEngine.simulatePing(pc1, pc2, devices, cables);
+    assert.strictEqual(sim1.success, true, 'Authorized first host on sticky port-security must succeed');
+    assert.deepStrictEqual(sw1.ports['Fa0/1'].portSecurity.secureMacs, ['0050.7966.0001']);
+
+    // Rogue laptop plugged into Fa0/1 with a spoofed MAC (0050.7966.9999)
+    pc1.mac = '0050.7966.9999';
+    pc1.ports['Eth0'].mac = '0050.7966.9999';
+    const simViolation = NetworkEngine.simulatePing(pc1, pc2, devices, cables);
+    assert.strictEqual(simViolation.success, false, 'Rogue MAC must be blocked by Port Security');
+    assert.strictEqual(sw1.ports['Fa0/1'].errDisabled, true, 'Shutdown violation mode must transition port to err-disabled');
+    assert.strictEqual(sw1.ports['Fa0/1'].up, false, 'Err-disabled port must be brought down');
+
+    const showOut = cli.execute('show port-security interface Fa0/1');
+    assert.ok(showOut.includes('Secure-shutdown'), 'show port-security interface must report Secure-shutdown');
+
+    // Recover port with shutdown + no shutdown and restore authorized MAC
+    pc1.mac = '0050.7966.0001';
+    pc1.ports['Eth0'].mac = '0050.7966.0001';
+    cli.execute('configure terminal');
+    cli.execute('interface Fa0/1');
+    cli.execute('shutdown');
+    cli.execute('no shutdown');
+    cli.execute('end');
+    assert.strictEqual(sw1.ports['Fa0/1'].errDisabled, false, 'shutdown + no shutdown must clear err-disabled state');
+    assert.strictEqual(sw1.ports['Fa0/1'].up, true);
+});
+
+// ---------------------------------------------------------------------------
+// 18. Spanning Tree Protocol (Root Bridge Election) & EtherChannel (LACP)
+// ---------------------------------------------------------------------------
+runTest('18. Spanning Tree Protocol (Root Primary) & LACP EtherChannel Bundling', () => {
+    const sw1 = makeDevice('sw1', 'switch', 'SW1-Core', {
+        'Fa0/1': { up: true, vlan: 1, mode: 'trunk' },
+        'Fa0/2': { up: true, vlan: 1, mode: 'trunk' }
+    }, { mac: '0050.7966.0099' });
+    const sw2 = makeDevice('sw2', 'switch', 'SW2-Access', {
+        'Fa0/1': { up: true, vlan: 1, mode: 'trunk' },
+        'Fa0/2': { up: true, vlan: 1, mode: 'trunk' }
+    }, { mac: '0050.7966.0001' });
+
+    const cables = [
+        { id: 'c1', from: 'sw1', fromPort: 'Fa0/1', to: 'sw2', toPort: 'Fa0/1' },
+        { id: 'c2', from: 'sw1', fromPort: 'Fa0/2', to: 'sw2', toPort: 'Fa0/2' }
+    ];
+    const devices = [sw1, sw2];
+    global.appState = { devices, cables, updateLiveGradeBadge: () => {}, logEvent: () => {} };
+
+    // Before EtherChannel: STP blocks 1 redundant link
+    const blockedBefore = NetworkEngine.computeStpBlockedPorts(devices, cables);
+    assert.strictEqual(blockedBefore.size, 1, 'Unbundled parallel links must have 1 port blocked by STP');
+
+    // Elect SW1-Core as Root Bridge via CLI and bundle Fa0/1-2 into LACP channel-group 1
+    const cli1 = new CiscoCLI(sw1);
+    cli1.execute('enable');
+    cli1.execute('configure terminal');
+    cli1.execute('spanning-tree vlan 1 root primary');
+    cli1.execute('interface range Fa0/1 - 2');
+    cli1.execute('channel-group 1 mode active');
+    cli1.execute('end');
+
+    const cli2 = new CiscoCLI(sw2);
+    cli2.execute('enable');
+    cli2.execute('configure terminal');
+    cli2.execute('interface range Fa0/1 - 2');
+    cli2.execute('channel-group 1 mode passive');
+    cli2.execute('end');
+
+    const stpInfo = NetworkEngine.getSpanningTreeInfo(sw1, devices, cables);
+    assert.strictEqual(stpInfo.isRoot, true, 'SW1-Core with root primary (Priority 24576) must win Root Bridge election');
+
+    // With EtherChannel bundled (active + passive), STP treats both links as 1 logical channel -> 0 blocked ports!
+    const blockedAfter = NetworkEngine.computeStpBlockedPorts(devices, cables);
+    assert.strictEqual(blockedAfter.size, 0, 'Bundled EtherChannel member links must not be blocked against each other by STP');
+
+    const ethOut = cli1.execute('show etherchannel summary');
+    assert.ok(ethOut.includes('Po1(SU)') && ethOut.includes('LACP'), 'show etherchannel summary must display Po1(SU) with LACP');
+});
+
+// ---------------------------------------------------------------------------
+// 19. All 12 Progressive Practical Labs Load & Auto-Grader Verification
+// ---------------------------------------------------------------------------
+runTest('19. All 12 Progressive NetAcad Practical Labs Load & Auto-Grade Correctly', () => {
+    require('../js/academy-tutor.js');
+    require('../js/app.js');
+
+    const labIds = ['lab1', 'lab2', 'lab3', 'lab4', 'lab5', 'lab6', 'lab7', 'lab8', 'lab9', 'lab10', 'lab11', 'lab12'];
+    for (const labId of labIds) {
+        global.appState.loadPresetTopology(labId);
+        assert.ok(global.appState.devices.length >= 3, `${labId} must populate topology devices`);
+        assert.ok(global.appState.cables.length >= 2, `${labId} must populate topology cables`);
+
+        // Run auto-demo commands for the lab and verify Auto-Grader reaches 100%
+        global.AcademyTutor.runLabAutoDemo(labId);
+        const grade = global.appState.evaluateLabGrade();
+        assert.ok(grade.checks.length >= 3, `${labId} must have at least 3 auto-grader criteria checks`);
+        assert.strictEqual(grade.percentage, 100, `${labId} must achieve 100% after executing solution commands (got ${grade.percentage}%)`);
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 20. NetAcad Curriculum Mapping, 10-Section Lab Schema & Pre/Post Assessment
+// ---------------------------------------------------------------------------
+runTest('20. NetAcad Curriculum Mapping, 10-Part Lab Schema & Diagnostic Assessment Verification', () => {
+    const tutor = global.AcademyTutor;
+    assert.ok(tutor.lessons.length >= 15, 'AcademyTutor must contain all 15 NetAcad lessons including STP/EtherChannel and Port Security');
+    assert.strictEqual(tutor.practicalLabsCatalog.length, 12, 'practicalLabsCatalog must contain all 12 Progressive Practical Labs');
+
+    // Verify every lesson has NetAcad track mapping with Authentic vs Simplified simulation boundaries
+    for (const lesson of tutor.lessons) {
+        const meta = tutor.netacadTrackMap[lesson.id];
+        assert.ok(meta && meta.courseCode, `Lesson ${lesson.id} must have a NetAcad courseCode reference`);
+        assert.ok(meta.simScope && meta.simScope.authentic && meta.simScope.simplified, `Lesson ${lesson.id} must define authentic and simplified simulation boundaries`);
+    }
+
+    // Verify every Practical Lab contains all 10 required sections
+    const requiredLabFields = [
+        'objectives', 'topologyDesc', 'devices', 'scenario', 'procedure',
+        'commands', 'expectedResults', 'verification', 'graderCriteria', 'hintsAndSolution'
+    ];
+    for (const lab of tutor.practicalLabsCatalog) {
+        for (const field of requiredLabFields) {
+            assert.ok(lab[field] && (Array.isArray(lab[field]) ? lab[field].length > 0 : String(lab[field]).trim().length > 0),
+                `Lab ${lab.id} must include non-empty field: ${field}`);
+        }
+    }
+
+    // Verify Pre/Post Assessment questions & diagnostic explanation engine
+    assert.ok(tutor.assessmentQuestions.length >= 10, 'Assessment bank must have at least 10 diagnostic questions');
+    for (const q of tutor.assessmentQuestions) {
+        assert.strictEqual(q.options.length, 4, `Question ${q.id} must have 4 choices`);
+        assert.ok(q.diagnosticWhyWrong && q.conceptSummary && q.cliRef, `Question ${q.id} must provide diagnostic feedback when answered wrong`);
+    }
+});
+
 console.log('\n======================================================================');
 console.log(`📊 TEST SUMMARY: ${passed} Passed, ${failed} Failed (Total: ${passed + failed})`);
 console.log('======================================================================');
@@ -654,3 +823,4 @@ console.log('===================================================================
 if (failed > 0) {
     process.exit(1);
 }
+

@@ -433,31 +433,43 @@
         </div>
     </div>
 
-    <!-- ACADEMY COURSE, SUBNET CALCULATOR & CHEAT SHEET MODAL -->
+    <!-- ACADEMY COURSE, 12 LABS, PRE/POST ASSESSMENT, SUBNET CALCULATOR & CHEAT SHEET MODAL -->
     <div id="academyModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
-        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             <div class="px-5 py-3.5 bg-slate-900 border-b border-cisco-border flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-500 flex items-center justify-center text-slate-950 font-bold text-lg shadow">🎓</div>
                     <div>
-                        <h3 class="font-bold text-base text-white">ศูนย์การเรียนรู้และฝึกปฏิบัติวิชา Computer Networks (13 บทตาม Syllabus)</h3>
-                        <p class="text-xs text-slate-400">สรุปทฤษฎีเข้มข้น • จุดเน้นออกสอบ • เครื่องคิดเลข Subnet/VLSM • โค้ชฝึกพิมพ์คำสั่งจริงทีละขั้น</p>
+                        <h3 class="font-bold text-base text-white">ศูนย์การเรียนรู้ Cisco Networking Academy (NetAcad Curriculum & Assessment)</h3>
+                        <p class="text-xs text-slate-400">Learn ➔ Configure ➔ Simulate ➔ Inspect ➔ Troubleshoot ➔ Evaluate • อ้างอิงหลักสูตร NetAcad & Cisco IOS</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button id="acadTabBtn-lessons" onclick="AcademyTutor.switchAcademyModalTab('lessons')" class="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow transition">📚 13 บทเรียนตามตารางสอน</button>
-                    <button id="acadTabBtn-subnet" onclick="AcademyTutor.switchAcademyModalTab('subnet')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">🧮 เครื่องคิดเลข Subnet & VLSM</button>
-                    <button id="acadTabBtn-cheatsheet" onclick="AcademyTutor.switchAcademyModalTab('cheatsheet')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">⚡ สรุปคำสั่งสอบ CLI</button>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button id="acadTabBtn-lessons" onclick="AcademyTutor.switchAcademyModalTab('lessons')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow transition">📚 บทเรียน & NetAcad Ref</button>
+                    <button id="acadTabBtn-labs" onclick="AcademyTutor.switchAcademyModalTab('labs')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">🧪 ใบงาน 12 Practical Labs</button>
+                    <button id="acadTabBtn-assessment" onclick="AcademyTutor.switchAcademyModalTab('assessment')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">📝 สอบ Pre/Post-Test & Progress</button>
+                    <button id="acadTabBtn-subnet" onclick="AcademyTutor.switchAcademyModalTab('subnet')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">🧮 เครื่องคิดเลข Subnet</button>
+                    <button id="acadTabBtn-cheatsheet" onclick="AcademyTutor.switchAcademyModalTab('cheatsheet')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">⚡ สรุปคำสั่ง CLI</button>
                     <button onclick="AcademyTutor.closeAcademyModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold ml-1">✕</button>
                 </div>
             </div>
 
-            <!-- Pane 1: 13 Course Modules -->
+            <!-- Pane 1: NetAcad Course Modules with Reference Mapping & Simulation Scope -->
             <div id="acadTabPane-lessons" class="flex-1 overflow-y-auto p-5">
                 <div id="academyLessonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- Pane 2: Interactive Subnetting / VLSM / CIDR Calculator -->
+            <!-- Pane 2: 12 Progressive Practical Labs (10-Part Full Lab Guide Sheets) -->
+            <div id="acadTabPane-labs" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyPracticalLabsBox" class="space-y-4"></div>
+            </div>
+
+            <!-- Pane 3: Pre-Test / Post-Test Assessment & Student Progress Tracker -->
+            <div id="acadTabPane-assessment" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyAssessmentBox" class="space-y-4"></div>
+            </div>
+
+            <!-- Pane 4: Interactive Subnetting / VLSM / CIDR Calculator -->
             <div id="acadTabPane-subnet" class="hidden flex-1 overflow-y-auto p-5 space-y-4">
                 <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
                     <div class="flex items-center justify-between">
@@ -495,7 +507,7 @@
                 <div id="calcResultBox"></div>
             </div>
 
-            <!-- Pane 3: Complete Cisco IOS Command Cheat Sheet -->
+            <!-- Pane 5: Complete Cisco IOS Command Cheat Sheet -->
             <div id="acadTabPane-cheatsheet" class="hidden flex-1 overflow-y-auto p-5">
                 <div id="academyCheatSheetList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
@@ -570,76 +582,124 @@
 
     <!-- LAB PRESETS SELECTOR MODAL -->
     <div id="presetModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-4xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between pb-3 border-b border-slate-700">
                 <div>
-                    <h3 class="font-bold text-base text-white">เลือกโจทย์แล็บมาตรฐาน CCNA (7 Curated Networking Labs)</h3>
-                    <p class="text-xs text-slate-400">ครอบคลุมตั้งแต่ Layer 2 Switching, Static Route, Troubleshooting, 802.1Q, OSPF ไปจนถึง ACL Firewall & NAT</p>
+                    <h3 class="font-bold text-base text-white">เลือกโจทย์แล็บมาตรฐาน Cisco NetAcad (12 Progressive Practical Labs)</h3>
+                    <p class="text-xs text-slate-400">เรียงตามลำดับความยากจากพื้นฐานสู่ระดับสูง พร้อมระบบตรวจให้คะแนน Auto-Grader และใบงาน 10 หัวข้อครบถ้วน</p>
                 </div>
-                <button onclick="ModalController.closePresetModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="ModalController.closePresetModal(); AcademyTutor.openAcademyModal('labs');" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold">🧪 เปิดใบงานแล็บ 10 หัวข้อ</button>
+                    <button onclick="ModalController.closePresetModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+                </div>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <button onclick="ModalController.selectPresetLab('lan')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 transition group">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <button onclick="ModalController.selectPresetLab('lab1')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 transition group">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-cyan-400">LAB 01 • LAYER 2</span>
+                        <span class="text-xs font-mono font-bold text-cyan-400">LAB 01 • NET-DEV-INIT</span>
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300">เริ่มต้น</span>
                     </div>
-                    <div class="font-bold text-sm text-white group-hover:text-cyan-300">Basic Switch LAN & MAC Table</div>
-                    <p class="text-xs text-slate-400 mt-1">คอมพิวเตอร์ 2 เครื่องและ Server เชื่อมต่อผ่าน Catalyst Switch ในวง 192.168.1.0/24</p>
+                    <div class="font-bold text-sm text-white group-hover:text-cyan-300">Basic Switch Configuration</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่าสวิตช์ SW1-Access (Hostname, Secret, Management VLAN 1 SVI) และเรียนรู้ตาราง MAC Address</p>
                 </button>
 
-                <button onclick="ModalController.selectPresetLab('subnets')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400 transition group">
+                <button onclick="ModalController.selectPresetLab('lab2')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400 transition group">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-emerald-400">LAB 02 • GATEWAY</span>
+                        <span class="text-xs font-mono font-bold text-emerald-400">LAB 02 • CCNA-ITN</span>
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">พื้นฐาน</span>
                     </div>
-                    <div class="font-bold text-sm text-white group-hover:text-emerald-300">Inter-Subnet Router Gateway</div>
-                    <p class="text-xs text-slate-400 mt-1">เชื่อมต่อ 2 วงแลน (192.168.10.0/24 และ .20.0/24) ข้าม Router 1 ตัวผ่าน Default Gateway</p>
+                    <div class="font-bold text-sm text-white group-hover:text-emerald-300">Basic Router Configuration</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่าเราเตอร์ R1-Core เชื่อมต่อ 2 วงแลน (.10.0/24 และ .20.0/24) พร้อมเปิดพอร์ตด้วย no shutdown</p>
                 </button>
 
-                <button onclick="ModalController.selectPresetLab('static-route')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-indigo-400 transition group">
+                <button onclick="ModalController.selectPresetLab('lab3')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 transition group">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-indigo-400">LAB 03 • STATIC ROUTE</span>
+                        <span class="text-xs font-mono font-bold text-amber-400">LAB 03 • CCNA-ITN M11</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">Subnetting</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-amber-300">IPv4 Addressing & VLSM Subnetting</div>
+                    <p class="text-xs text-slate-400 mt-1">แบ่ง Subnet /26 (62 โฮสต์) สำหรับ Sales LAN (.0/26) และ Eng LAN (.64/26) แล้วกำหนด IP ให้ถูกต้อง</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab4')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-indigo-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-indigo-400">LAB 04 • CCNA-SRWE M15</span>
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">ระดับกลาง</span>
                     </div>
-                    <div class="font-bold text-sm text-white group-hover:text-indigo-300">Multi-Router WAN & Static Route</div>
-                    <p class="text-xs text-slate-400 mt-1">สำนักงานใหญ่ (R1-HQ) เชื่อมต่อสาขา (R2-Branch) ด้วยคำสั่ง ip route ข้ามลิงก์ 10.0.0.0/30</p>
+                    <div class="font-bold text-sm text-white group-hover:text-indigo-300">IPv4 Static & Default Routing</div>
+                    <p class="text-xs text-slate-400 mt-1">สำนักงานใหญ่ (R1-HQ) เชื่อมต่อสาขา (R2-Branch) ด้วยคำสั่ง ip route ทั้งขาไปและขากลับข้ามลิงก์ /30</p>
                 </button>
 
-                <button onclick="ModalController.selectPresetLab('troubleshoot')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 transition group">
+                <button onclick="ModalController.selectPresetLab('lab5')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 transition group">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-amber-400">LAB 04 • CHALLENGE</span>
+                        <span class="text-xs font-mono font-bold text-purple-400">LAB 05 • CCNA-SRWE M3</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300">802.1Q Trunk</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-purple-300">VLAN Segmentation & 802.1Q Trunking</div>
+                    <p class="text-xs text-slate-400 mt-1">แยก Broadcast Domain ด้วย VLAN 10/20 ข้ามสวิตช์ 2 ตัว (SW1-Core ⟷ SW2-Access) ผ่านสาย 802.1Q Trunk</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab6')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/40 hover:border-purple-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-purple-400">LAB 06 • CCNA-SRWE M4</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">ROAS</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-purple-300">Inter-VLAN Routing (Router-on-a-Stick)</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่า 802.1Q Sub-interfaces (Gig0/0.10 & Gig0/0.20) บน R1-ROAS เพื่อให้ VLAN 10 กับ VLAN 20 คุยกันได้</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab7')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-teal-500/40 hover:border-teal-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-teal-400">LAB 07 • CCNA-SRWE M7</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">DHCP DORA</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-teal-300">DHCPv4 Server & Client Lease</div>
+                    <p class="text-xs text-slate-400 mt-1">สร้าง DHCP Pool บน R1-DHCP ยกเว้น Excluded Address และสั่ง ipconfig /renew บนเครื่องลูกข่าย</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab8')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 hover:border-sky-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-sky-400">LAB 08 • CCNA-ENSA M1-2</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">Dynamic OSPF</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-sky-300">Single-Area OSPFv2 Routing</div>
+                    <p class="text-xs text-slate-400 mt-1">แลกเปลี่ยนตาราง Routing อัตโนมัติด้วย OSPF Process 1 Area 0 พร้อมตรวจสอบ Neighbor สถานะ FULL</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab9')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/40 hover:border-rose-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-rose-400">LAB 09 • CCNA-ENSA M4-5</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">ACL Security</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-rose-300">Standard & Extended IPv4 ACLs</div>
+                    <p class="text-xs text-slate-400 mt-1">คัดกรองแพ็กเก็ตด้วย ACL บล็อก Guest-PC แต่เปิดให้ Admin-PC เข้าถึง Finance-SRV ได้ตามกฎ Top-Down</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab10')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-orange-500/40 hover:border-orange-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-orange-400">LAB 10 • CCNA-ENSA M6</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300">NAT / PAT</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-orange-300">NAT/PAT Overload & Edge Firewall</div>
+                    <p class="text-xs text-slate-400 mt-1">แปลง Private IP (Inside Local) เป็น Public IP (Inside Global) ด้วย PAT Overload ออกสู่อินเทอร์เน็ต</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab11')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-amber-400">LAB 11 • CCNA-ENSA M12</span>
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">ภารกิจซ่อมแล็บ</span>
                     </div>
-                    <div class="font-bold text-sm text-white group-hover:text-amber-300">Troubleshooting: ซ่อมเครือข่ายล่ม!</div>
-                    <p class="text-xs text-slate-400 mt-1">ค้นหาและแก้ไขปัญหา 3 จุด (พอร์ต Shutdown, Gateway ผิด, IP คนละวง) เพื่อให้ได้คะแนน 100%</p>
+                    <div class="font-bold text-sm text-white group-hover:text-amber-300">Network Troubleshooting Challenge</div>
+                    <p class="text-xs text-slate-400 mt-1">ค้นหาและแก้ไขปัญหา 3 จุด (พอร์ต Shutdown, Default Gateway ผิด, IP คนละวง) เพื่อให้ได้ 100%</p>
                 </button>
 
-                <button onclick="ModalController.selectPresetLab('roas-vlan')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/40 hover:border-purple-400 transition group">
+                <button onclick="ModalController.selectPresetLab('lab12')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/50 hover:border-emerald-400 transition group">
                     <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-purple-400">LAB 05 • 802.1Q ROAS</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">CCNA Pro</span>
+                        <span class="text-xs font-mono font-bold text-emerald-400">LAB 12 • CAPSTONE</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Integrated Lab</span>
                     </div>
-                    <div class="font-bold text-sm text-white group-hover:text-purple-300">VLAN Trunking & Router-on-a-Stick</div>
-                    <p class="text-xs text-slate-400 mt-1">ตั้งค่า 802.1Q Trunk และ Sub-interface (Gig0/0.10 & .20) ให้ VLAN 10 กับ VLAN 20 คุยกันได้</p>
-                </button>
-
-                <button onclick="ModalController.selectPresetLab('ospf-core')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 hover:border-sky-400 transition group">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-sky-400">LAB 06 • DYNAMIC OSPF</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">CCNA Pro</span>
-                    </div>
-                    <div class="font-bold text-sm text-white group-hover:text-sky-300">OSPF Area 0 Dynamic Routing</div>
-                    <p class="text-xs text-slate-400 mt-1">แลกเปลี่ยนตาราง Routing อัตโนมัติด้วย OSPF Process 1 พร้อมตรวจสอบ show ip ospf neighbor</p>
-                </button>
-
-                <button onclick="ModalController.selectPresetLab('acl-nat')" class="sm:col-span-2 text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/40 hover:border-rose-400 transition group">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="text-xs font-mono font-bold text-rose-400">LAB 07 • SECURITY & WAN</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">CCNA Security</span>
-                    </div>
-                    <div class="font-bold text-sm text-white group-hover:text-rose-300">Extended ACL Firewall, NAT Overload & ISP Cloud</div>
-                    <p class="text-xs text-slate-400 mt-1">ทดสอบ Firewall บล็อก ICMP Ping แต่เปิดให้เข้าเว็บ HTTP (Port 80) ออกสู่ ISP Cloud พร้อมแปลง IP ด้วย NAT</p>
+                    <div class="font-bold text-sm text-white group-hover:text-emerald-300">Integrated Enterprise Network</div>
+                    <p class="text-xs text-slate-400 mt-1">บูรณาการครบวงจร: VLAN, Port Security, OSPF, DHCP, Extended ACL และ PAT Overload ในเครือข่ายเดียว!</p>
                 </button>
             </div>
         </div>
