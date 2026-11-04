@@ -4,6 +4,8 @@ import { useSessionStore } from '@application/stores/useSessionStore';
 import { AppHeader } from './layouts/AppHeader';
 import { SubnetCalculatorModal } from './components/modals/SubnetCalculatorModal';
 import { CiscoTerminalModal } from './components/terminal/CiscoTerminalModal';
+import { NetAcadCoachModal } from './components/modals/NetAcadCoachModal';
+import { TopologyViewport } from './components/canvas/TopologyViewport';
 import { Server, Router, Laptop, Cloud, Terminal } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -68,15 +70,12 @@ export const App: React.FC = () => {
         </aside>
 
         {/* Viewport Canvas Center Container */}
-        <main className="flex-1 relative bg-[#060a11] overflow-hidden flex items-center justify-center">
-          <div className="text-center space-y-2 pointer-events-none select-none opacity-40">
-            <div className="font-mono text-sm text-cyan-400">CN-Tracersim Interactive Canvas Viewport</div>
-            <div className="text-xs text-slate-500">แตะอุปกรณ์ฝั่งซ้ายเพื่อวางลงบนผังเครือข่าย หรือเลือกอุปกรณ์เพื่อเปิด CLI</div>
-          </div>
+        <main className="flex-1 relative bg-[#060a11] overflow-hidden flex flex-col">
+          <TopologyViewport />
 
           {/* Quick Selection Floating Pill */}
           {selectedDevice && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-cisco-border px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur z-20 animate-in fade-in slide-in-from-bottom-3 duration-150">
+            <div className="absolute top-4 right-4 bg-slate-900/95 border border-cisco-border px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 backdrop-blur z-20 animate-in fade-in slide-in-from-top-3 duration-150">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="font-bold text-sm text-white">{selectedDevice.name}</span>
@@ -85,7 +84,7 @@ export const App: React.FC = () => {
               <div className="h-4 w-px bg-slate-700"></div>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => openModal('cli')}
+                  onClick={() => openModal('cli', selectedDevice.id)}
                   className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow"
                 >
                   <Terminal size={14} />
@@ -107,6 +106,10 @@ export const App: React.FC = () => {
           device={selectedDevice} 
           onClose={closeModal} 
         />
+      )}
+
+      {activeModal === 'academy' && (
+        <NetAcadCoachModal onClose={closeModal} />
       )}
     </div>
   );

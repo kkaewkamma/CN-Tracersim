@@ -86,6 +86,15 @@ export const AppHeader: React.FC = () => {
           <span className="hidden sm:inline">Subnet</span>
         </button>
 
+        {/* Switch to Legacy UI */}
+        <a
+          href="?legacy=true"
+          className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-mono border border-slate-700 transition"
+          title="สลับไปยังโหมด Legacy Canvas"
+        >
+          Legacy
+        </a>
+
         {/* NetAcad Academy Modal */}
         <button
           onClick={() => openModal('academy')}
