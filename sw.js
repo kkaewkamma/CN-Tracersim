@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netsim-touch-v1';
+const CACHE_NAME = 'netsim-touch-v4.0-ultimate';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
