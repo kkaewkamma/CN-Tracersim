@@ -7,6 +7,15 @@ const params = new URLSearchParams(window.location.search);
 const isLegacy = params.get('legacy') === 'true';
 const rootEl = document.getElementById('root');
 
+// Trigger background Service Worker update check to guarantee latest release
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const reg of registrations) {
+      reg.update();
+    }
+  });
+}
+
 if (rootEl && !isLegacy) {
   ReactDOM.createRoot(rootEl).render(
     <React.StrictMode>

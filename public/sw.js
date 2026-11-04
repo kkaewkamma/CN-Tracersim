@@ -1,15 +1,8 @@
-const CACHE_NAME = 'cn-tracersim-v5.2-core';
+const CACHE_NAME = 'cn-tracersim-v5.2.2-clean';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  './css/style.css',
-  './js/network-engine.js',
-  './js/cisco-cli.js',
-  './js/academy-tutor.js',
-  './js/modals.js',
-  './js/canvas-ui.js',
-  './js/app.js',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
 ];
@@ -33,26 +26,33 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Navigation / HTML request: Network-First to guarantee latest UI release
+  if (e.request.mode === 'navigate' || e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request)
+        .then((networkResponse) => {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+          return networkResponse;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Static assets: Cache-First with fallback to network
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(e.request)
-        .then((networkResponse) => {
-          if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(e.request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          if (e.request.destination === 'document') {
-            return caches.match('./index.html');
-          }
-        });
+      return fetch(e.request).then((networkResponse) => {
+        if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, responseClone));
+        }
+        return networkResponse;
+      });
     })
   );
 });
