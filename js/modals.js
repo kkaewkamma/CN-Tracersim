@@ -616,6 +616,10 @@ const ModalController = {
         term.textContent = this.cliInstance.device.cliHistory;
         term.scrollTop = term.scrollHeight;
 
+        if (window.AcademyTutor && typeof window.AcademyTutor.updateInTerminalCoachBanner === 'function') {
+            window.AcademyTutor.updateInTerminalCoachBanner();
+        }
+
         const chipsContainer = document.getElementById('cliQuickChips');
         chipsContainer.innerHTML = '';
         const chips = this.cliInstance.getQuickChips();

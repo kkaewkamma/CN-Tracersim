@@ -1,13 +1,16 @@
 /**
- * NetSim Touch v4.0 Ultimate - Cisco IOS CLI Simulator Engine
- * Supports:
- * - Hierarchical Modes: User (>), Privileged (#), Global Config (config#), Interface (config-if#), Sub-interface (config-subif#), Router OSPF (config-router#)
- * - Tab Auto-Completion & Command History (ArrowUp / ArrowDown)
- * - 802.1Q Trunking & Router-on-a-Stick (encapsulation dot1Q <vlan>)
- * - OSPF Dynamic Routing & Multi-Hop Static Routing
- * - Extended Access Control Lists (access-list 100 permit/deny icmp|tcp|ip ...) & show access-lists
- * - Network Address Translation (ip nat inside/outside, show ip nat translations)
- * - DHCP Client (ip address dhcp), HTTP Client (http <ip>), Traceroute, ARP, and MAC Table
+ * NetSim Touch v5.0 Academy Edition - Complete Cisco IOS CLI Simulator Engine
+ * Supports 100% of University Network Course Syllabus Commands:
+ * - Hierarchical Modes: User (>), Privileged (#), Global Config (config#), Interface (config-if#),
+ *   Sub-interface (config-subif#), VLAN Config (config-vlan#), Line Config (config-line#), Router OSPF (config-router#)
+ * - Basic Switch & Security: hostname, enable secret, service password-encryption, banner motd,
+ *   line console 0, line vty 0 4, password, login, transport input ssh, crypto key generate rsa
+ * - VLANs & Inter-VLAN: vlan <id> + name <name>, switchport mode access/trunk, switchport trunk native vlan <id>,
+ *   interface vlan <id> (SVI), ip routing (Layer 3 Switch), encapsulation dot1Q <id> (Router-on-a-Stick)
+ * - IPv4 & IPv6: ip address, ip address dhcp, ipv6 unicast-routing, ipv6 address <addr/prefix|autoconfig>, ping ipv6
+ * - Routing: ip route (Static/Default Route), router ospf 1 + network <ip> <wildcard> area 0
+ * - Security & WAN: Standard ACL (1-99), Extended ACL (100-199), ip access-group <id> in/out,
+ *   Static NAT (ip nat inside source static) & PAT Overload (ip nat inside source list 1 interface ... overload)
  */
 
 class CiscoCLI {
@@ -15,7 +18,9 @@ class CiscoCLI {
         this.device = device;
         if (!this.device.routes) this.device.routes = [];
         if (!this.device.acls) this.device.acls = [];
+        if (!this.device.staticNat) this.device.staticNat = [];
         if (!this.device.natTranslations) this.device.natTranslations = [];
+        if (!this.device.vlans) this.device.vlans = { 1: 'default' };
         if (!this.device.ospf) this.device.ospf = { processId: null, networks: [] };
         if (!this.device.cmdHistory) this.device.cmdHistory = [];
         this.historyCursor = this.device.cmdHistory.length;
@@ -31,6 +36,8 @@ class CiscoCLI {
                 return (this.device.cliCurrentIf && this.device.cliCurrentIf.includes('.'))
                     ? `${name}(config-subif)#`
                     : `${name}(config-if)#`;
+            case 'config-vlan': return `${name}(config-vlan)#`;
+            case 'config-line': return `${name}(config-line)#`;
             case 'config-router': return `${name}(config-router)#`;
             case 'user':
             default: return `${name}>`;
@@ -48,6 +55,7 @@ class CiscoCLI {
                 { label: 'ping ...', cmd: 'ping ', run: false },
                 { label: 'http ...', cmd: 'http ', run: false },
                 { label: 'traceroute ...', cmd: 'traceroute ', run: false },
+                { label: 'arp -a', cmd: 'arp -a', run: true },
                 { label: 'show ip int br', cmd: 'show ip int brief', run: true }
             ];
             if (isSwitch) {
@@ -60,9 +68,10 @@ class CiscoCLI {
                 { label: 'conf t', cmd: 'configure terminal', run: true },
                 { label: 'show ip int br', cmd: 'show ip int brief', run: true }
             ];
-            if (isRouter) {
+            if (isRouter || this.device.ipRouting) {
                 chips.push(
                     { label: 'show ip route', cmd: 'show ip route', run: true },
+                    { label: 'show ipv6 int br', cmd: 'show ipv6 int brief', run: true },
                     { label: 'show access-lists', cmd: 'show access-lists', run: true },
                     { label: 'show ip nat tr', cmd: 'show ip nat translations', run: true },
                     { label: 'show ip ospf nei', cmd: 'show ip ospf neighbor', run: true }
@@ -76,9 +85,9 @@ class CiscoCLI {
                 );
             }
             chips.push(
+                { label: 'show ip arp', cmd: 'show ip arp', run: true },
                 { label: 'show run', cmd: 'show running-config', run: true },
                 { label: 'ping ...', cmd: 'ping ', run: false },
-                { label: 'http ...', cmd: 'http ', run: false },
                 { label: 'write', cmd: 'write', run: true }
             );
             return chips;
@@ -87,14 +96,23 @@ class CiscoCLI {
             Object.keys(this.device.ports).forEach(p => {
                 chips.push({ label: `int ${p}`, cmd: `interface ${p}`, run: true });
             });
-            if (isRouter) {
+            if (isSwitch) {
+                chips.push(
+                    { label: 'vlan 10', cmd: 'vlan 10', run: true },
+                    { label: 'int vlan 1', cmd: 'interface vlan 1', run: true },
+                    { label: 'ip routing (L3 SW)', cmd: 'ip routing', run: true },
+                    { label: 'enable secret class', cmd: 'enable secret class', run: true },
+                    { label: 'line vty 0 4', cmd: 'line vty 0 4', run: true }
+                );
+            } else if (isRouter) {
                 chips.push(
                     { label: 'ip route ...', cmd: 'ip route ', run: false },
                     { label: 'router ospf 1', cmd: 'router ospf 1', run: true },
-                    { label: 'access-list 100 deny icmp ...', cmd: 'access-list 100 deny icmp any any', run: false },
+                    { label: 'ipv6 unicast-routing', cmd: 'ipv6 unicast-routing', run: true },
+                    { label: 'access-list 100 ...', cmd: 'access-list 100 deny icmp any any', run: false },
                     { label: 'ip nat overload', cmd: 'ip nat inside source list 1 interface Gig0/1 overload', run: true }
                 );
-            } else if (!isSwitch) {
+            } else {
                 chips.push({ label: 'ip default-gw ...', cmd: 'ip default-gateway ', run: false });
             }
             chips.push(
@@ -103,30 +121,54 @@ class CiscoCLI {
                 { label: 'end', cmd: 'end', run: true }
             );
             return chips;
+        } else if (mode === 'config-vlan') {
+            return [
+                { label: 'name Sales', cmd: 'name Sales', run: true },
+                { label: 'name Engineering', cmd: 'name Engineering', run: true },
+                { label: 'exit', cmd: 'exit', run: true },
+                { label: 'end', cmd: 'end', run: true }
+            ];
+        } else if (mode === 'config-line') {
+            return [
+                { label: 'password cisco', cmd: 'password cisco', run: true },
+                { label: 'login', cmd: 'login', run: true },
+                { label: 'transport input ssh', cmd: 'transport input ssh', run: true },
+                { label: 'exit', cmd: 'exit', run: true },
+                { label: 'end', cmd: 'end', run: true }
+            ];
         } else if (mode === 'config-if') {
             const chips = [];
             const isSubIf = this.device.cliCurrentIf && this.device.cliCurrentIf.includes('.');
-            if (isSwitch) {
+            const isSvi = this.device.cliCurrentIf && this.device.cliCurrentIf.toLowerCase().startsWith('vlan');
+            if (isSwitch && !isSvi) {
                 chips.push(
                     { label: 'mode trunk', cmd: 'switchport mode trunk', run: true },
                     { label: 'mode access', cmd: 'switchport mode access', run: true },
                     { label: 'vlan 10', cmd: 'switchport access vlan 10', run: true },
-                    { label: 'vlan 20', cmd: 'switchport access vlan 20', run: true }
+                    { label: 'vlan 20', cmd: 'switchport access vlan 20', run: true },
+                    { label: 'native vlan 99', cmd: 'switchport trunk native vlan 99', run: true }
                 );
             } else {
                 if (isSubIf) {
                     const subVlan = this.device.cliCurrentIf.split('.')[1] || '10';
                     chips.push({ label: `encap dot1Q ${subVlan}`, cmd: `encapsulation dot1Q ${subVlan}`, run: true });
                 }
-                chips.push({ label: 'ip add ...', cmd: 'ip address ', run: false });
+                chips.push(
+                    { label: 'ip add ...', cmd: 'ip address ', run: false },
+                    { label: 'ipv6 add ...', cmd: 'ipv6 address 2001:db8:10::1/64', run: false }
+                );
                 if (isRouter) {
                     chips.push(
                         { label: 'ip nat inside', cmd: 'ip nat inside', run: true },
-                        { label: 'ip nat outside', cmd: 'ip nat outside', run: true }
+                        { label: 'ip nat outside', cmd: 'ip nat outside', run: true },
+                        { label: 'ip access-group 100 in', cmd: 'ip access-group 100 in', run: true }
                     );
                 }
                 if (this.device.type === 'pc' || this.device.type === 'server') {
-                    chips.push({ label: 'ip add dhcp', cmd: 'ip address dhcp', run: true });
+                    chips.push(
+                        { label: 'ip add dhcp', cmd: 'ip address dhcp', run: true },
+                        { label: 'ipv6 autoconfig (SLAAC)', cmd: 'ipv6 address autoconfig', run: true }
+                    );
                 }
             }
             chips.push(
@@ -154,23 +196,28 @@ class CiscoCLI {
         const mode = this.device.cliMode;
         const candidatesByMode = {
             'user': [
-                'enable', 'ping ', 'http ', 'traceroute ', 'show ip interface brief', 'show vlan brief', 'help'
+                'enable', 'ping ', 'http ', 'traceroute ', 'arp -a', 'show ip interface brief', 'show vlan brief', 'help'
             ],
             'privileged': [
-                'configure terminal', 'show ip interface brief', 'show ip route', 'show access-lists',
+                'configure terminal', 'show ip interface brief', 'show ipv6 interface brief', 'show ip route', 'show access-lists',
                 'show ip nat translations', 'show ip ospf neighbor', 'show ip arp', 'show running-config',
                 'show vlan brief', 'show interfaces trunk', 'show mac address-table', 'ping ', 'http ',
-                'traceroute ', 'write', 'disable', 'clear', 'exit'
+                'traceroute ', 'clear arp-cache', 'write', 'disable', 'clear', 'exit'
             ],
             'config': [
-                'interface ', 'hostname ', 'ip route ', 'no ip route ', 'ip default-gateway ',
-                'router ospf 1', 'access-list 100 ', 'no access-list ', 'ip nat inside source list 1 interface Gig0/1 overload',
-                'exit', 'end'
+                'interface ', 'interface vlan ', 'vlan ', 'hostname ', 'enable secret ', 'service password-encryption',
+                'banner motd #Authorized Access Only#', 'line console 0', 'line vty 0 4', 'crypto key generate rsa',
+                'ip routing', 'ipv6 unicast-routing', 'ip route ', 'no ip route ', 'ip default-gateway ',
+                'router ospf 1', 'access-list 100 ', 'ip nat inside source static ',
+                'ip nat inside source list 1 interface Gig0/1 overload', 'exit', 'end'
             ],
+            'config-vlan': ['name ', 'exit', 'end'],
+            'config-line': ['password ', 'login', 'login local', 'transport input ssh', 'exit', 'end'],
             'config-if': [
-                'ip address ', 'ip address dhcp', 'ip nat inside', 'ip nat outside',
+                'ip address ', 'ip address dhcp', 'ipv6 address ', 'ipv6 address autoconfig',
+                'ip nat inside', 'ip nat outside', 'ip access-group 100 in',
                 'encapsulation dot1Q ', 'switchport mode trunk', 'switchport mode access',
-                'switchport access vlan ', 'no shutdown', 'shutdown', 'exit', 'end'
+                'switchport access vlan ', 'switchport trunk native vlan ', 'no shutdown', 'shutdown', 'exit', 'end'
             ],
             'config-router': [
                 'network ', 'no network ', 'exit', 'end'
@@ -184,6 +231,7 @@ class CiscoCLI {
             'conf t': 'configure terminal',
             'sh ip int': 'show ip interface brief',
             'sh ip int br': 'show ip interface brief',
+            'sh ipv6 int br': 'show ipv6 interface brief',
             'sh ip ro': 'show ip route',
             'sh ip os': 'show ip ospf neighbor',
             'sh ip na': 'show ip nat translations',
@@ -196,12 +244,16 @@ class CiscoCLI {
             'sw m t': 'switchport mode trunk',
             'sw m a': 'switchport mode access',
             'sw a v': 'switchport access vlan ',
+            'sw t n v': 'switchport trunk native vlan ',
             'encap': 'encapsulation dot1Q ',
             'no sh': 'no shutdown',
             'ip add': 'ip address ',
+            'ipv6 add': 'ipv6 address ',
             'ip def': 'ip default-gateway ',
             'ro os': 'router ospf 1',
-            'acc': 'access-list 100 deny icmp any any'
+            'en sec': 'enable secret ',
+            'serv pass': 'service password-encryption',
+            'trans in ssh': 'transport input ssh'
         };
         if (shorthandMap[lower]) {
             return shorthandMap[lower];
@@ -236,15 +288,28 @@ class CiscoCLI {
         }
         this.historyCursor = this.device.cmdHistory.length;
 
+        const out = this._executeInternal(input);
+
+        if (window.AcademyTutor && typeof window.AcademyTutor.onCliCommandExecuted === 'function') {
+            window.AcademyTutor.onCliCommandExecuted(this.device, input, out);
+        }
+
+        return out;
+    }
+
+    _executeInternal(input) {
         const tokens = input.split(/\s+/);
         const cmd = tokens[0].toLowerCase();
         const arg1 = (tokens[1] || '').toLowerCase();
         const arg2 = (tokens[2] || '').toLowerCase();
         const arg3 = (tokens[3] || '').toLowerCase();
 
-        if (cmd === 'clear') {
+        if (cmd === 'clear' && !arg1) {
             this.device.cliHistory = '';
             return '__CLEARED__';
+        }
+        if (cmd === 'clear' && arg1.startsWith('arp')) {
+            return '%ARP-6-CACHE_CLEARED: IP ARP cache cleared on all interfaces.';
         }
         if (cmd === '?' || cmd === 'help') {
             return this.getHelpText();
@@ -258,6 +323,9 @@ class CiscoCLI {
             }
             if (cmd === 'show' || cmd === 'sh') {
                 return this.handleShowCommand(tokens.slice(1));
+            }
+            if (cmd === 'arp') {
+                return this.handleShowCommand(['ip', 'arp']);
             }
             if (cmd === 'ping') {
                 return this.handlePingCommand(tokens[1]);
@@ -307,6 +375,63 @@ class CiscoCLI {
             return `% Invalid input or command incomplete.\nType '?' or 'configure terminal' to configure.`;
         }
 
+        // ================= VLAN CONFIG MODE (config-vlan)# =================
+        if (this.device.cliMode === 'config-vlan') {
+            if (cmd === 'exit' || cmd === 'ex') {
+                this.device.cliMode = 'config';
+                return '';
+            }
+            if (cmd === 'end') {
+                this.device.cliMode = 'privileged';
+                return '';
+            }
+            if (cmd === 'name') {
+                const vName = tokens[1] || `VLAN${this.device.cliCurrentVlan}`;
+                this.device.vlans = this.device.vlans || { 1: 'default' };
+                this.device.vlans[this.device.cliCurrentVlan] = vName;
+                if (this.onStateChange) this.onStateChange();
+                return `%VLAN-6-NAME: VLAN ${this.device.cliCurrentVlan} named "${vName}"`;
+            }
+            if (cmd === 'do') {
+                return this.executeInPrivilegedContext(tokens.slice(1).join(' '));
+            }
+            return `% Usage in VLAN mode: name <vlan-name> or exit`;
+        }
+
+        // ================= LINE CONFIG MODE (config-line)# =================
+        if (this.device.cliMode === 'config-line') {
+            if (cmd === 'exit' || cmd === 'ex') {
+                this.device.cliMode = 'config';
+                return '';
+            }
+            if (cmd === 'end') {
+                this.device.cliMode = 'privileged';
+                return '';
+            }
+            if (cmd === 'password') {
+                this.device.linePassword = tokens[1] || 'cisco';
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'login') {
+                this.device.lineLogin = arg1 === 'local' ? 'local' : true;
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            if (cmd === 'transport' && arg1 === 'input') {
+                this.device.sshEnabled = (arg2 === 'ssh' || arg2 === 'all');
+                if (this.onStateChange) this.onStateChange();
+                return `%LINE-6-TRANSPORT: VTY transport input set to ${(arg2 || 'ssh').toUpperCase()}`;
+            }
+            if (cmd === 'exec-timeout') {
+                return '';
+            }
+            if (cmd === 'do') {
+                return this.executeInPrivilegedContext(tokens.slice(1).join(' '));
+            }
+            return `% Usage in Line mode: password <pw>, login, transport input ssh, exit`;
+        }
+
         // ================= GLOBAL CONFIG MODE =================
         if (this.device.cliMode === 'config') {
             if (cmd === 'exit' || cmd === 'ex' || cmd === 'end') {
@@ -319,9 +444,100 @@ class CiscoCLI {
                 if (this.onStateChange) this.onStateChange();
                 return '';
             }
+            // Basic Security: enable secret / enable password
+            if (cmd === 'enable' && (arg1 === 'secret' || arg1 === 'password')) {
+                if (!tokens[2]) return '% Usage: enable secret <password>';
+                this.device.enableSecret = tokens[2];
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            // service password-encryption
+            if (cmd === 'service' && arg1.startsWith('password')) {
+                this.device.passwordEncryption = true;
+                if (this.onStateChange) this.onStateChange();
+                return '%SEC-6-PASS_ENCRYPT: Password encryption service enabled';
+            }
+            // banner motd
+            if (cmd === 'banner' && arg1 === 'motd') {
+                this.device.bannerMotd = tokens.slice(2).join(' ').replace(/^[^a-zA-Z0-9ก-๙]+|[^a-zA-Z0-9ก-๙!]+$/g, '');
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            // line console 0 / line vty 0 4
+            if (cmd === 'line' && (arg1.startsWith('con') || arg1.startsWith('vty'))) {
+                this.device.cliMode = 'config-line';
+                this.device.cliCurrentLine = tokens.slice(1).join(' ');
+                return '';
+            }
+            // SSH setup: ip domain-name, username, crypto key generate rsa
+            if (cmd === 'ip' && arg1 === 'domain-name') {
+                this.device.domainName = tokens[2] || 'cisco.local';
+                return '';
+            }
+            if (cmd === 'username') {
+                this.device.sshUser = tokens[1] || 'admin';
+                return '';
+            }
+            if (cmd === 'crypto' && arg1 === 'key' && arg2 === 'generate') {
+                this.device.sshEnabled = true;
+                if (this.onStateChange) this.onStateChange();
+                return `The name for the keys will be: ${this.device.name}.${this.device.domainName || 'cisco.local'}\nGenerating 1024 bit RSA keys, keys will be non-exportable...[OK]\n%SSH-5-ENABLED: SSH 1.99/2.0 has been enabled`;
+            }
+            // VLAN creation: vlan <id>
+            if (cmd === 'vlan') {
+                if (this.device.type !== 'switch') return '% VLAN database configuration is only supported on Switches.';
+                const vId = parseInt(tokens[1], 10);
+                if (isNaN(vId) || vId < 1 || vId > 4094) return '% Usage: vlan <1-4094>';
+                this.device.vlans = this.device.vlans || { 1: 'default' };
+                if (!this.device.vlans[vId]) {
+                    this.device.vlans[vId] = `VLAN${String(vId).padStart(4, '0')}`;
+                }
+                this.device.cliMode = 'config-vlan';
+                this.device.cliCurrentVlan = vId;
+                if (this.onStateChange) this.onStateChange();
+                return '';
+            }
+            // Layer 3 Switch routing: ip routing
+            if (cmd === 'ip' && arg1 === 'routing') {
+                this.device.ipRouting = true;
+                if (this.onStateChange) this.onStateChange();
+                return `%MLS-6-IPROUTING: Layer 3 Switch IPv4 Inter-VLAN Routing enabled on ${this.device.name}`;
+            }
+            // IPv6 Unicast Routing: ipv6 unicast-routing
+            if (cmd === 'ipv6' && arg1.startsWith('unicast')) {
+                this.device.ipv6Routing = true;
+                if (this.onStateChange) this.onStateChange();
+                return `%IPV6-6-ENABLED: IPv6 Unicast Routing enabled on ${this.device.name}`;
+            }
+            // Interface / Sub-interface / SVI (interface vlan X)
             if (cmd === 'interface' || cmd === 'int') {
-                if (!tokens[1]) return '% Incomplete command. Usage: interface <Gig0/0 | Gig0/0.10 | Fa0/1>';
+                if (!tokens[1]) return '% Incomplete command. Usage: interface <Gig0/0 | Gig0/0.10 | Fa0/1 | vlan 10>';
                 const rawIf = tokens.slice(1).join('');
+
+                // Handle SVI: interface vlan <id>
+                if (rawIf.toLowerCase().startsWith('vlan')) {
+                    const vlanNum = parseInt(rawIf.replace(/vlan/i, ''), 10);
+                    if (isNaN(vlanNum) || vlanNum < 1 || vlanNum > 4094) {
+                        return '% Invalid VLAN interface. Example: interface vlan 10';
+                    }
+                    const sviName = `Vlan${vlanNum}`;
+                    if (!this.device.ports[sviName]) {
+                        this.device.ports[sviName] = {
+                            ip: '',
+                            mask: '255.255.255.0',
+                            up: true,
+                            vlan: vlanNum,
+                            isSvi: true,
+                            mac: NetworkEngine.generateMac(this.device.type)
+                        };
+                    }
+                    this.device.cliMode = 'config-if';
+                    this.device.cliCurrentIf = sviName;
+                    if (this.onStateChange) this.onStateChange();
+                    return `%LINEPROTO-5-UPDOWN: Line protocol on Interface ${sviName}, changed state to up`;
+                }
+
+                // Handle Router 802.1Q Sub-interface: interface Gig0/0.10
                 if (rawIf.includes('.') && this.device.type === 'router') {
                     const [basePart, subId] = rawIf.split('.');
                     const matchedBase = this.findMatchingPort(basePart);
@@ -356,8 +572,8 @@ class CiscoCLI {
                 return '';
             }
             if (cmd === 'router' && arg1 === 'ospf') {
-                if (this.device.type !== 'router') {
-                    return '% OSPF routing is only supported on Router devices.';
+                if (!NetworkEngine.isL3Device(this.device)) {
+                    return '% OSPF routing requires a Router or Layer 3 Switch (enable "ip routing" first).';
                 }
                 const pid = parseInt(tokens[2] || '1', 10) || 1;
                 this.device.ospf = this.device.ospf || { processId: pid, networks: [] };
@@ -365,19 +581,47 @@ class CiscoCLI {
                 this.device.cliMode = 'config-router';
                 return '';
             }
-            // Extended ACL: access-list <100-199> <permit|deny> <icmp|tcp|ip|http> <src|any> [<dst|any>]
+            // Standard ACL (1-99) & Extended ACL (100-199)
             if (cmd === 'access-list') {
                 if (this.device.type !== 'router') {
                     return '% Access-lists are only supported on Router devices.';
                 }
                 const aclId = parseInt(tokens[1], 10) || 100;
                 const action = (tokens[2] || '').toLowerCase();
-                const proto = (tokens[3] || '').toLowerCase();
+                if (!['permit', 'deny'].includes(action)) {
+                    return '% Usage:\n  Standard ACL (1-99):  access-list 1 <permit|deny> <src-ip|any> [wildcard]\n  Extended ACL (100+):  access-list 100 <permit|deny> <icmp|tcp|ip> <src|any> <dst|any>';
+                }
+
+                // Standard ACL (1-99): access-list 1 permit|deny <src|any|host X> [wildcard]
+                if (aclId >= 1 && aclId <= 99) {
+                    let src = (tokens[3] || 'any').toLowerCase();
+                    let srcWildcard = tokens[4] || '0.0.0.0';
+                    if (src === 'host') {
+                        src = tokens[4] || 'any';
+                        srcWildcard = '0.0.0.0';
+                    }
+                    this.device.acls = this.device.acls || [];
+                    this.device.acls.push({
+                        id: aclId,
+                        action,
+                        protocol: 'ip',
+                        src,
+                        srcWildcard: NetworkEngine.isValidIPv4(srcWildcard) ? srcWildcard : '0.0.0.0',
+                        dst: 'any',
+                        dstWildcard: '0.0.0.0',
+                        hits: 0
+                    });
+                    if (this.onStateChange) this.onStateChange();
+                    return `%SEC-6-ACL_ADDED: Standard IP access list ${aclId} (${action} ${src}) active`;
+                }
+
+                // Extended ACL (100-199)
+                const proto = (tokens[3] || 'ip').toLowerCase();
                 const src = (tokens[4] || 'any').toLowerCase();
                 const dst = (tokens[5] || 'any').toLowerCase();
 
-                if (!['permit', 'deny'].includes(action) || !['icmp', 'tcp', 'ip', 'http'].includes(proto)) {
-                    return '% Usage: access-list <100-199> <permit|deny> <icmp|tcp|ip> <src-ip|any> <dst-ip|any>\nExample: access-list 100 deny icmp any 192.168.20.100';
+                if (!['icmp', 'tcp', 'udp', 'ip', 'http'].includes(proto)) {
+                    return '% Usage: access-list <100-199> <permit|deny> <icmp|tcp|ip> <src-ip|any> <dst-ip|any>';
                 }
 
                 this.device.acls = this.device.acls || [];
@@ -404,15 +648,36 @@ class CiscoCLI {
                 if (this.onStateChange) this.onStateChange();
                 return '';
             }
-            // NAT Overload: ip nat inside source ...
+            // Static NAT & Dynamic NAT / PAT Overload
             if (cmd === 'ip' && arg1 === 'nat') {
                 if (this.device.type !== 'router') return '% NAT is only supported on Router devices.';
+                if (arg2 === 'inside' && arg3 === 'source' && (tokens[4] || '').toLowerCase() === 'static') {
+                    const localIp = tokens[5];
+                    const globalIp = tokens[6];
+                    if (!NetworkEngine.isValidIPv4(localIp) || !NetworkEngine.isValidIPv4(globalIp)) {
+                        return '% Usage: ip nat inside source static <inside-local-ip> <inside-global-ip>';
+                    }
+                    this.device.staticNat = this.device.staticNat || [];
+                    this.device.staticNat.push({ insideLocal: localIp, insideGlobal: globalIp });
+                    this.device.natEnabled = true;
+                    this.device.natTranslations = this.device.natTranslations || [];
+                    this.device.natTranslations.unshift({
+                        proto: '---',
+                        insideGlobal: globalIp,
+                        insideLocal: localIp,
+                        outsideLocal: '---',
+                        outsideGlobal: '---'
+                    });
+                    if (this.onStateChange) this.onStateChange();
+                    return `%NAT-6-STATIC: Static NAT mapping ${localIp} -> ${globalIp} configured`;
+                }
                 this.device.natEnabled = true;
                 if (this.onStateChange) this.onStateChange();
                 return `%NAT-6-ENABLED: Dynamic NAT/PAT Overload enabled on ${this.device.name}`;
             }
             if (cmd === 'no' && arg1 === 'ip' && arg2 === 'nat') {
                 this.device.natEnabled = false;
+                this.device.staticNat = [];
                 this.device.natTranslations = [];
                 if (this.onStateChange) this.onStateChange();
                 return '';
@@ -426,8 +691,8 @@ class CiscoCLI {
                 return '';
             }
             if (cmd === 'ip' && arg1 === 'route') {
-                if (this.device.type !== 'router') {
-                    return '% IP routing is only supported on Router devices.';
+                if (!NetworkEngine.isL3Device(this.device)) {
+                    return '% IP routing is only supported on Routers or Layer 3 Switches.';
                 }
                 const net = tokens[2];
                 const mask = tokens[3];
@@ -517,6 +782,18 @@ class CiscoCLI {
                 this.device.cliCurrentIf = null;
                 return '';
             }
+            if (cmd === 'description' || cmd === 'desc') {
+                portObj.description = tokens.slice(1).join(' ');
+                return '';
+            }
+            // ip access-group <id> <in|out>
+            if (cmd === 'ip' && arg1 === 'access-group') {
+                const aclId = parseInt(tokens[2], 10) || 100;
+                const dir = (tokens[3] || 'in').toLowerCase();
+                portObj.aclGroup = { id: aclId, direction: dir };
+                if (this.onStateChange) this.onStateChange();
+                return `%SEC-6-ACL_BOUND: Access-list ${aclId} applied ${dir.toUpperCase()}BOUND on ${currentPort}`;
+            }
             // ip nat inside / outside
             if (cmd === 'ip' && arg1 === 'nat' && (arg2 === 'inside' || arg2 === 'outside')) {
                 if (this.device.type !== 'router') return '% IP NAT is only supported on Router interfaces.';
@@ -524,6 +801,28 @@ class CiscoCLI {
                 this.device.natEnabled = true;
                 if (this.onStateChange) this.onStateChange();
                 return `%NAT-6-INTF: Interface ${currentPort} configured as IP NAT ${arg2.toUpperCase()}`;
+            }
+            // IPv6 Interface Configuration: ipv6 address <addr/prefix | autoconfig>
+            if (cmd === 'ipv6' && (arg1 === 'address' || arg1 === 'add')) {
+                if (arg2 === 'autoconfig' || arg2 === 'dhcp') {
+                    const randHost = Math.floor(10 + Math.random() * 89);
+                    portObj.ipv6 = `2001:db8:10::${randHost}/64`;
+                    portObj.ipv6LinkLocal = `FE80::${randHost}`;
+                    portObj.up = true;
+                    if (this.onStateChange) this.onStateChange();
+                    return `%IPV6-6-SLAAC: Interface ${currentPort} autoconfigured Global Unicast ${portObj.ipv6} via SLAAC Router Advertisement`;
+                }
+                const v6 = tokens[2];
+                if (!v6 || !NetworkEngine.isValidIPv6(v6)) {
+                    return '% Invalid IPv6 address. Example: ipv6 address 2001:db8:10::1/64';
+                }
+                if (arg3 === 'link-local') {
+                    portObj.ipv6LinkLocal = v6;
+                } else {
+                    portObj.ipv6 = v6.includes('/') ? v6 : `${v6}/64`;
+                }
+                if (this.onStateChange) this.onStateChange();
+                return '';
             }
             if (cmd === 'encapsulation' || cmd === 'encap') {
                 if (this.device.type !== 'router') {
@@ -558,14 +857,32 @@ class CiscoCLI {
                     }
                     portObj.mode = 'access';
                     portObj.vlan = vlanId;
+                    this.device.vlans = this.device.vlans || { 1: 'default' };
+                    if (!this.device.vlans[vlanId]) {
+                        this.device.vlans[vlanId] = `VLAN${String(vlanId).padStart(4, '0')}`;
+                    }
                     if (this.onStateChange) this.onStateChange();
                     return `% Access VLAN on ${currentPort} set to VLAN ${vlanId}`;
                 }
-                return '% Usage: switchport mode <access|trunk> OR switchport access vlan <1-4094>';
+                if (arg1 === 'trunk' && arg2 === 'native' && arg3 === 'vlan') {
+                    const nativeId = parseInt(tokens[4], 10);
+                    if (isNaN(nativeId) || nativeId < 1 || nativeId > 4094) {
+                        return '% Usage: switchport trunk native vlan <1-4094>';
+                    }
+                    portObj.nativeVlan = nativeId;
+                    if (this.onStateChange) this.onStateChange();
+                    return `%TRUNK-6-NATIVE: Native VLAN on ${currentPort} set to VLAN ${nativeId}`;
+                }
+                if (arg1 === 'trunk' && arg2 === 'allowed' && arg3 === 'vlan') {
+                    portObj.allowedVlans = tokens[4] || 'all';
+                    if (this.onStateChange) this.onStateChange();
+                    return '';
+                }
+                return '% Usage: switchport mode <access|trunk>, switchport access vlan <id>, or switchport trunk native vlan <id>';
             }
             if (cmd === 'ip' && (arg1 === 'address' || arg1 === 'add')) {
-                if (this.device.type === 'switch') {
-                    return '% Layer 2 switch port cannot be assigned an IP address directly.';
+                if (this.device.type === 'switch' && !portObj.isSvi) {
+                    return '% Layer 2 physical switch port cannot be assigned an IP address directly. Use "interface vlan 1" (SVI) instead.';
                 }
                 if (arg2 === 'dhcp') {
                     const allDevs = window.appState ? window.appState.devices : [];
@@ -630,7 +947,7 @@ class CiscoCLI {
             if (clean === query || clean.startsWith(query)) {
                 return p;
             }
-            if (query.replace('gigabitethernet', 'g').replace('gig', 'g').replace('fastethernet', 'fa') === 
+            if (query.replace('gigabitethernet', 'g').replace('gig', 'g').replace('fastethernet', 'fa') ===
                 clean.replace('gigabitethernet', 'g').replace('gig', 'g').replace('fastethernet', 'fa')) {
                 return p;
             }
@@ -643,6 +960,19 @@ class CiscoCLI {
         const allDevices = window.appState ? window.appState.devices : [];
         const allCables = window.appState ? window.appState.cables : [];
 
+        // show ipv6 interface brief
+        if (full.startsWith('ipv6 int')) {
+            let out = '';
+            for (const [pName, pObj] of Object.entries(this.device.ports)) {
+                const isUp = NetworkEngine.isInterfaceUp(this.device, pName);
+                const stateStr = isUp ? '[up/up]' : '[administratively down/down]';
+                const ll = pObj.ipv6LinkLocal || (pObj.ipv6 ? 'FE80::1' : 'unassigned');
+                const gu = pObj.ipv6 || 'unassigned';
+                out += `${pName.padEnd(20, ' ')}${stateStr}\n    ${ll}\n    ${gu}\n`;
+            }
+            return out.trimEnd();
+        }
+
         // show ip interface brief
         if (full.startsWith('ip int') || full === 'ip interface brief') {
             let out = 'Interface              IP-Address      OK? Method Status                Protocol\n';
@@ -650,7 +980,7 @@ class CiscoCLI {
             for (const [pName, pObj] of Object.entries(this.device.ports)) {
                 const namePadded = pName.padEnd(22, ' ');
                 let ipLabel = pObj.ip || 'unassigned';
-                if (this.device.type === 'switch') {
+                if (this.device.type === 'switch' && !pObj.isSvi) {
                     ipLabel = pObj.mode === 'trunk' ? 'TRUNK (802.1Q)' : `VLAN ${pObj.vlan || 1}`;
                 }
                 const ipPadded = ipLabel.padEnd(16, ' ');
@@ -669,12 +999,25 @@ class CiscoCLI {
             if (acls.length === 0) {
                 return 'No IP access lists configured.';
             }
-            let out = 'Extended IP access list 100\n';
-            acls.forEach((r, idx) => {
-                const seq = (idx + 1) * 10;
-                const eqSuffix = r.protocol === 'tcp' ? ' eq www (80)' : '';
-                out += `    ${seq} ${r.action} ${r.protocol} ${r.src} ${r.dst}${eqSuffix} (${r.hits || 0} matches)\n`;
+            let out = '';
+            const grouped = {};
+            acls.forEach(r => {
+                if (!grouped[r.id]) grouped[r.id] = [];
+                grouped[r.id].push(r);
             });
+            for (const [id, list] of Object.entries(grouped)) {
+                const isStd = Number(id) < 100;
+                out += `${isStd ? 'Standard' : 'Extended'} IP access list ${id}\n`;
+                list.forEach((r, idx) => {
+                    const seq = (idx + 1) * 10;
+                    if (isStd) {
+                        out += `    ${seq} ${r.action} ${r.src} (${r.hits || 0} matches)\n`;
+                    } else {
+                        const eqSuffix = r.protocol === 'tcp' ? ' eq www (80)' : '';
+                        out += `    ${seq} ${r.action} ${r.protocol} ${r.src} ${r.dst || 'any'}${eqSuffix} (${r.hits || 0} matches)\n`;
+                    }
+                });
+            }
             return out.trimEnd();
         }
 
@@ -701,8 +1044,9 @@ class CiscoCLI {
                 return 'No trunk ports configured on this switch.';
             }
             let out = 'Port        Mode         Encapsulation  Status        Native vlan\n';
-            for (const [pName] of trunks) {
-                out += `${pName.padEnd(12, ' ')}on           802.1q         trunking      1\n`;
+            for (const [pName, pObj] of trunks) {
+                const nativeVlan = pObj.nativeVlan || 1;
+                out += `${pName.padEnd(12, ' ')}on           802.1q         trunking      ${nativeVlan}\n`;
             }
             return out.trimEnd();
         }
@@ -713,8 +1057,13 @@ class CiscoCLI {
                 return '% Ambiguous command: "show vlan" is only available on Catalyst Switches.';
             }
             const vlanGroups = { 1: [] };
+            if (this.device.vlans) {
+                Object.keys(this.device.vlans).forEach(v => {
+                    if (!vlanGroups[v]) vlanGroups[v] = [];
+                });
+            }
             for (const [pName, pObj] of Object.entries(this.device.ports)) {
-                if (pObj.mode === 'trunk') continue;
+                if (pObj.mode === 'trunk' || pObj.isSvi) continue;
                 const v = pObj.vlan || 1;
                 if (!vlanGroups[v]) vlanGroups[v] = [];
                 vlanGroups[v].push(pName);
@@ -724,7 +1073,8 @@ class CiscoCLI {
             out +=    '---- -------------------------------- --------- -------------------------------\n';
             Object.keys(vlanGroups).sort((a, b) => Number(a) - Number(b)).forEach(v => {
                 const vPadded = String(v).padEnd(5, ' ');
-                const vName = (v === '1' ? 'default' : `VLAN${String(v).padStart(4, '0')}`).padEnd(33, ' ');
+                const customName = this.device.vlans?.[v];
+                const vName = (customName || (v === '1' ? 'default' : `VLAN${String(v).padStart(4, '0')}`)).padEnd(33, ' ');
                 const portsStr = vlanGroups[v].join(', ');
                 out += `${vPadded}${vName}active    ${portsStr}\n`;
             });
@@ -736,7 +1086,7 @@ class CiscoCLI {
             if (this.device.type !== 'switch') {
                 return '% MAC Address Table is only available on Switches.';
             }
-            let out = '          Mac Address Table\n-------------------------------------------\n';
+            let out = '          Mac Address Table (CAM Table)\n-------------------------------------------\n';
             out += 'Vlan    Mac Address       Type        Ports\n';
             out += '----    -----------       --------    -----\n';
             const myCables = allCables.filter(c => c.from === this.device.id || c.to === this.device.id);
@@ -772,8 +1122,8 @@ class CiscoCLI {
 
         // show ip ospf neighbor
         if (full.startsWith('ip ospf')) {
-            if (this.device.type !== 'router') {
-                return '% OSPF is only supported on Router devices.';
+            if (!NetworkEngine.isL3Device(this.device)) {
+                return '% OSPF is only supported on Router or Layer 3 Switch devices.';
             }
             const neighbors = NetworkEngine.getOspfNeighbors(this.device, allDevices, allCables);
             if (neighbors.length === 0) {
@@ -788,7 +1138,7 @@ class CiscoCLI {
 
         // show ip route
         if (full.startsWith('ip ro')) {
-            if (this.device.type !== 'router') {
+            if (!NetworkEngine.isL3Device(this.device)) {
                 return `IP routing is not enabled on this device.\nDefault gateway is ${this.device.gateway || 'not set'}`;
             }
             let out = 'Codes: C - connected, L - local, S - static, O - OSPF\n\nGateway of last resort is not set\n\n';
@@ -796,7 +1146,7 @@ class CiscoCLI {
                 if (pObj.ip && NetworkEngine.isInterfaceUp(this.device, pName)) {
                     const cidr = NetworkEngine.maskToCidr(pObj.mask || '255.255.255.0');
                     const net = NetworkEngine.getNetworkAddress(pObj.ip, pObj.mask || '255.255.255.0');
-                    const vlanSuffix = pObj.vlan ? ` (dot1Q VLAN ${pObj.vlan})` : '';
+                    const vlanSuffix = pObj.vlan ? ` (VLAN ${pObj.vlan})` : '';
                     out += `C    ${net}/${cidr} is directly connected, ${pName}${vlanSuffix}\n`;
                     out += `L    ${pObj.ip}/32 is directly connected, ${pName}\n`;
                 }
@@ -816,16 +1166,29 @@ class CiscoCLI {
 
         // show running-config
         if (full.startsWith('run')) {
-            let out = `Building configuration...\n\nCurrent configuration : 1080 bytes\n!\n`;
+            let out = `Building configuration...\n\nCurrent configuration : 1240 bytes\n!\n`;
+            if (this.device.passwordEncryption) out += `service password-encryption\n`;
             out += `hostname ${this.device.name}\n!\n`;
+            if (this.device.enableSecret) {
+                out += `enable secret 5 $1$mERr$hx5rVt7rPNoS4wqbXKX7m0\n!\n`;
+            }
+            if (this.device.ipRouting) {
+                out += `ip routing\n!\n`;
+            }
+            if (this.device.ipv6Routing) {
+                out += `ipv6 unicast-routing\n!\n`;
+            }
             if (this.device.gateway) {
                 out += `ip default-gateway ${this.device.gateway}\n!\n`;
             }
             for (const [pName, pObj] of Object.entries(this.device.ports)) {
                 out += `interface ${pName}\n`;
-                if (this.device.type === 'switch') {
+                if (this.device.type === 'switch' && !pObj.isSvi) {
                     if (pObj.mode === 'trunk') {
                         out += ` switchport mode trunk\n`;
+                        if (pObj.nativeVlan && pObj.nativeVlan !== 1) {
+                            out += ` switchport trunk native vlan ${pObj.nativeVlan}\n`;
+                        }
                     } else {
                         out += ` switchport mode access\n`;
                         out += ` switchport access vlan ${pObj.vlan || 1}\n`;
@@ -839,20 +1202,26 @@ class CiscoCLI {
                     } else {
                         out += ` no ip address\n`;
                     }
+                    if (pObj.ipv6) {
+                        out += ` ipv6 address ${pObj.ipv6}\n`;
+                    }
                     if (pObj.nat) {
                         out += ` ip nat ${pObj.nat}\n`;
+                    }
+                    if (pObj.aclGroup) {
+                        out += ` ip access-group ${pObj.aclGroup.id} ${pObj.aclGroup.direction}\n`;
                     }
                 }
                 out += ` ${pObj.up ? 'no shutdown' : 'shutdown'}\n!\n`;
             }
-            if (this.device.type === 'router' && this.device.ospf?.networks?.length > 0) {
+            if (NetworkEngine.isL3Device(this.device) && this.device.ospf?.networks?.length > 0) {
                 out += `router ospf ${this.device.ospf.processId || 1}\n`;
                 for (const n of this.device.ospf.networks) {
                     out += ` network ${n.network} ${n.wildcard} area ${n.area}\n`;
                 }
                 out += `!\n`;
             }
-            if (this.device.type === 'router' && this.device.routes?.length > 0) {
+            if (NetworkEngine.isL3Device(this.device) && this.device.routes?.length > 0) {
                 for (const r of this.device.routes) {
                     out += `ip route ${r.network} ${r.mask} ${r.nextHop}\n`;
                 }
@@ -860,26 +1229,58 @@ class CiscoCLI {
             }
             if (this.device.type === 'router' && this.device.acls?.length > 0) {
                 for (const a of this.device.acls) {
-                    out += `access-list ${a.id} ${a.action} ${a.protocol} ${a.src} ${a.dst}\n`;
+                    out += `access-list ${a.id} ${a.action} ${a.protocol} ${a.src} ${a.dst || 'any'}\n`;
                 }
                 out += `!\n`;
+            }
+            if (this.device.bannerMotd) {
+                out += `banner motd ^C${this.device.bannerMotd}^C\n!\n`;
+            }
+            if (this.device.linePassword || this.device.sshEnabled) {
+                out += `line vty 0 4\n`;
+                if (this.device.linePassword) out += ` password ${this.device.passwordEncryption ? '7 0822455D0A16' : this.device.linePassword}\n`;
+                if (this.device.sshEnabled) out += ` transport input ssh\n`;
+                out += ` login\n!\n`;
             }
             out += `end`;
             return out;
         }
 
-        return `% Incomplete or unsupported show command.\nTry: show ip int brief, show ip route, show access-lists, show ip nat translations, show ip ospf neighbor, show vlan brief, show run`;
+        return `% Incomplete or unsupported show command.\nTry: show ip int brief, show ipv6 int brief, show ip route, show access-lists, show ip nat translations, show ip ospf neighbor, show vlan brief, show run`;
     }
 
     handlePingCommand(targetIp) {
-        if (!targetIp || !NetworkEngine.isValidIPv4(targetIp)) {
-            return '% Usage: ping <valid_ip_address>';
+        if (!targetIp) {
+            return '% Usage: ping <ip_or_ipv6_address>';
         }
 
         const allDevices = window.appState ? window.appState.devices : [];
         const allCables = window.appState ? window.appState.cables : [];
-        let targetDev = null;
 
+        // Support IPv6 Ping
+        if (NetworkEngine.isValidIPv6(targetIp)) {
+            const cleanTarget = targetIp.split('/')[0].toLowerCase();
+            let targetDev = null;
+            for (const dev of allDevices) {
+                for (const p of Object.values(dev.ports)) {
+                    if (p.ipv6 && p.ipv6.split('/')[0].toLowerCase() === cleanTarget && p.up) {
+                        targetDev = dev;
+                        break;
+                    }
+                }
+                if (targetDev) break;
+            }
+            if (!targetDev) {
+                return `Type escape sequence to abort.\nSending 5, 100-byte ICMPv6 Echos to ${cleanTarget}, timeout is 2 seconds:\n.....\nSuccess rate is 0 percent (0/5) (IPv6 destination not found or port down)`;
+            }
+            return `Type escape sequence to abort.\nSending 5, 100-byte ICMPv6 Echos to ${cleanTarget}, timeout is 2 seconds:\n!!!!!\nSuccess rate is 100 percent (5/5), round-trip min/avg/max = 1/2/3 ms\n(IPv6 Neighbor Discovery ND/NA & ICMPv6 Echo Reply from ${targetDev.name} สำเร็จ!)`;
+        }
+
+        if (!NetworkEngine.isValidIPv4(targetIp)) {
+            return '% Usage: ping <valid_ipv4_or_ipv6_address>';
+        }
+
+        let targetDev = null;
         for (const dev of allDevices) {
             for (const p of Object.values(dev.ports)) {
                 if (p.ip === targetIp) {
@@ -934,7 +1335,7 @@ class CiscoCLI {
             window.appState.lastPduSimulation = sim;
         }
         if (sim.success) {
-            return `GET /index.html HTTP/1.1\nHost: ${targetIp}:80\n\nHTTP/1.1 200 OK\nServer: Cisco-NetSim-Web/4.0 (${targetDev.name})\nContent-Type: text/html\n\n<html><body><h1>Welcome to ${targetDev.name} (${targetIp})</h1></body></html>`;
+            return `[TCP 3-Way Handshake: SYN ➔ SYN-ACK ➔ ACK Established]\nGET /index.html HTTP/1.1\nHost: ${targetIp}:80\n\nHTTP/1.1 200 OK\nServer: Cisco-NetSim-Web/5.0 (${targetDev.name})\nContent-Type: text/html\n\n<html><body><h1>Welcome to ${targetDev.name} (${targetIp})</h1></body></html>`;
         } else {
             return `Connecting to http://${targetIp}:80 ... Failed!\nReason: ${sim.reason}`;
         }
@@ -989,45 +1390,55 @@ class CiscoCLI {
             return `Available commands in User Exec mode:
   enable                  Turn on privileged commands
   show ip int brief       Summary of interface IP status
-  ping <ip>               Send ICMP echo request
+  ping <ip|ipv6>          Send ICMP / ICMPv6 echo request
   http <ip>               Send TCP Port 80 HTTP GET request
-  traceroute <ip>         Trace route to destination IP`;
+  traceroute <ip>         Trace route to destination IP
+  arp -a                  Display ARP cache`;
         } else if (mode === 'privileged') {
             return `Available commands in Privileged Exec mode:
   configure terminal      Enter global configuration mode
-  show ip int brief       Brief summary of interface status
+  show ip int brief       Brief summary of IPv4 interface status
+  show ipv6 int brief     Brief summary of IPv6 interface status
   show ip route           Display IP routing table (Connected/Static/OSPF)
-  show access-lists       Display Extended ACL firewall rules & hit counts
-  show ip nat translations Display active NAT/PAT table
+  show access-lists       Display Standard & Extended ACL firewall rules
+  show ip nat translations Display active Static & Dynamic NAT/PAT table
   show ip ospf neighbor   Display OSPF neighbor adjacencies
   show ip arp             Display IP-to-MAC ARP table
-  show vlan brief         Display VLAN assignments (Switch)
-  show interfaces trunk   Display 802.1Q trunk ports (Switch)
-  show mac address-table  Display L2 MAC forwarding table (Switch)
+  show vlan brief         Display VLAN database & port assignments (Switch)
+  show interfaces trunk   Display 802.1Q trunk & Native VLAN (Switch)
+  show mac address-table  Display L2 CAM/MAC forwarding table (Switch)
   show run                Display current running configuration
   ping / http / traceroute Test network connectivity`;
         } else if (mode === 'config') {
             return `Available commands in Global Config mode:
   hostname <name>                 Set system network name
+  enable secret <password>        Set encrypted privileged exec password
+  service password-encryption     Encrypt plaintext passwords in config
+  banner motd #<text>#            Set Message-of-the-Day login banner
+  line console 0 / line vty 0 4   Configure Console or SSH/Telnet VTY lines
+  vlan <1-4094>                   Create VLAN and enter config-vlan mode
+  interface vlan <1-4094>         Configure Switch SVI (Management or L3 Switch)
+  ip routing                      Enable Layer 3 Switch Inter-VLAN Routing
+  ipv6 unicast-routing            Enable IPv6 routing
   interface <port | port.vlan>    Select interface or 802.1Q sub-interface
   router ospf <process-id>        Enable OSPF dynamic routing process
-  access-list 100 <permit|deny> <icmp|tcp|ip> <src> <dst>  Add Firewall ACL rule
-  ip nat inside source ...        Enable NAT/PAT Overload on Router
-  ip route <net> <mask> <nexthop> Add static route (Router)
+  access-list <1-199> ...         Add Standard (1-99) or Extended (100+) ACL
+  ip nat inside source static ... Configure 1-to-1 Static NAT
+  ip nat inside source list 1 ... Enable PAT Overload on Router
+  ip route <net> <mask> <nexthop> Add static or default route (0.0.0.0)
   ip default-gateway <ip>         Set default gateway (PC/Server/Switch)
   exit / end                      Exit configuration mode`;
-        } else if (mode === 'config-router') {
-            return `Available commands in Router OSPF mode:
-  network <ip> <wildcard> area <id> Advertise subnet in OSPF
-  exit / end                        Exit router configuration`;
         } else if (mode === 'config-if') {
             return `Available commands in Interface Config mode:
   ip address <ip> <mask>          Set IPv4 address and subnet mask
-  ip address dhcp                 Acquire IPv4 address via DHCP
+  ip address dhcp                 Acquire IPv4 address via DHCP (DORA)
+  ipv6 address <v6/len|autoconfig> Set IPv6 Global Unicast or SLAAC autoconfig
   ip nat <inside|outside>         Set NAT interface role (Router)
+  ip access-group <id> <in|out>   Bind ACL firewall to interface
   encapsulation dot1Q <vlan-id>   Set 802.1Q VLAN tag on Router sub-interface
   switchport mode <access|trunk>  Set switchport L2 mode (Access or 802.1Q Trunk)
   switchport access vlan <1-4094> Set access VLAN ID (Switch port)
+  switchport trunk native vlan <id> Set 802.1Q Native VLAN on Trunk port
   no shutdown / shutdown          Enable or disable this interface`;
         }
         return '';

@@ -1,13 +1,14 @@
 /**
- * NetSim Touch v4.0 Ultimate - Enterprise Network, Security (ACL/NAT) & OSI 7-Layer Simulation Engine
+ * NetSim Touch v5.0 Academy Edition - Enterprise Network, Security (ACL/NAT), IPv6, L3 Switch & OSI 7-Layer Engine
  * Supports:
- * - IPv4 Subnetting & Longest Prefix Match (LPM)
- * - Layer 2 Access VLANs & 802.1Q Trunking
- * - Router-on-a-Stick (802.1Q Sub-interfaces, e.g. Gig0/0.10)
- * - Multi-Hop Static Routing (ip route) & Dynamic OSPF (router ospf)
- * - Extended Access Control Lists (ACL) filtering by Protocol (ICMP / TCP Port 80 / IP) and Src/Dst Subnet
- * - Network Address Translation (NAT / PAT Overload) with live translation table
- * - Layer 7 HTTP Web Request (TCP Port 80) & DHCP DORA Allocation Engine
+ * - IPv4 Subnetting, VLSM Calculator & Longest Prefix Match (LPM)
+ * - IPv6 Addressing, SLAAC & ICMPv6 Ping Simulation
+ * - Layer 2 Access VLANs, Native VLANs & 802.1Q Trunking
+ * - Inter-VLAN Routing: Router-on-a-Stick (802.1Q Sub-interfaces) & Layer 3 Switch SVI (ip routing + interface VlanX)
+ * - Multi-Hop Static Routing (ip route), Default Route & Dynamic OSPF (router ospf)
+ * - Standard ACL (1-99) & Extended ACL (100-199) Firewall Filtering
+ * - Static NAT & Dynamic NAT / PAT Overload
+ * - Layer 7 HTTP Web Request (TCP Port 80 + 3-Way Handshake) & DHCP DORA Allocation Engine
  * - Full 7-Layer OSI PDU Encapsulation Inspector
  */
 
@@ -21,6 +22,13 @@ const NetworkEngine = {
             const num = parseInt(p, 10);
             return num >= 0 && num <= 255 && (p === '0' || !p.startsWith('0'));
         });
+    },
+
+    isValidIPv6(addr) {
+        if (!addr || typeof addr !== 'string') return false;
+        const clean = addr.trim().split('/')[0];
+        if (!clean.includes(':')) return false;
+        return /^[0-9a-fA-F:]+$/.test(clean);
     },
 
     isValidMask(mask) {
@@ -49,11 +57,23 @@ const NetworkEngine = {
         ].join('.');
     },
 
+    cidrToMask(cidr) {
+        const bits = Math.max(0, Math.min(32, parseInt(cidr, 10) || 24));
+        const maskInt = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+        return this.intToIp(maskInt);
+    },
+
     wildcardToMask(wildcard) {
         if (!this.isValidIPv4(wildcard)) return '255.255.255.0';
         const wInt = this.ipToInt(wildcard);
         const mInt = (~wInt) >>> 0;
         return this.intToIp(mInt);
+    },
+
+    maskToWildcard(mask) {
+        if (!this.isValidIPv4(mask)) return '0.0.0.255';
+        const mInt = this.ipToInt(mask);
+        return this.intToIp((~mInt) >>> 0);
     },
 
     maskToCidr(mask) {
@@ -70,6 +90,64 @@ const NetworkEngine = {
     getNetworkAddress(ip, mask) {
         if (!this.isValidIPv4(ip) || !this.isValidIPv4(mask)) return null;
         return this.intToIp((this.ipToInt(ip) & this.ipToInt(mask)) >>> 0);
+    },
+
+    /**
+     * Full IPv4 Subnetting / VLSM / CIDR Calculator for Academy Learning
+     */
+    calculateSubnetDetails(ipInput = '192.168.10.65', cidrOrMask = 26) {
+        const ip = this.isValidIPv4(ipInput) ? ipInput.trim() : '192.168.10.1';
+        let cidr = 24;
+        let mask = '255.255.255.0';
+        if (typeof cidrOrMask === 'number' || /^\d+$/.test(String(cidrOrMask))) {
+            cidr = Math.max(8, Math.min(32, parseInt(cidrOrMask, 10) || 24));
+            mask = this.cidrToMask(cidr);
+        } else if (this.isValidMask(cidrOrMask)) {
+            mask = cidrOrMask;
+            cidr = this.maskToCidr(mask);
+        }
+
+        const ipInt = this.ipToInt(ip);
+        const maskInt = this.ipToInt(mask);
+        const wildcardInt = (~maskInt) >>> 0;
+        const netInt = (ipInt & maskInt) >>> 0;
+        const bcastInt = (netInt | wildcardInt) >>> 0;
+
+        const hostBits = 32 - cidr;
+        const totalAddresses = Math.pow(2, hostBits);
+        const usableHosts = hostBits <= 1 ? 0 : totalAddresses - 2;
+        const firstHost = hostBits <= 1 ? this.intToIp(netInt) : this.intToIp((netInt + 1) >>> 0);
+        const lastHost = hostBits <= 1 ? this.intToIp(bcastInt) : this.intToIp((bcastInt - 1) >>> 0);
+
+        const firstOctet = (ipInt >>> 24) & 255;
+        let ipClass = 'Class C';
+        if (firstOctet >= 1 && firstOctet <= 126) ipClass = 'Class A';
+        else if (firstOctet >= 128 && firstOctet <= 191) ipClass = 'Class B';
+        else if (firstOctet >= 224) ipClass = 'Class D/E (Multicast)';
+
+        const toBin = (numInt) => [
+            ((numInt >>> 24) & 255).toString(2).padStart(8, '0'),
+            ((numInt >>> 16) & 255).toString(2).padStart(8, '0'),
+            ((numInt >>> 8) & 255).toString(2).padStart(8, '0'),
+            (numInt & 255).toString(2).padStart(8, '0')
+        ].join('.');
+
+        return {
+            ip,
+            cidr,
+            mask,
+            wildcard: this.intToIp(wildcardInt),
+            networkAddress: this.intToIp(netInt),
+            broadcastAddress: this.intToIp(bcastInt),
+            firstHost,
+            lastHost,
+            usableHosts,
+            totalAddresses,
+            hostBits,
+            ipClass,
+            binaryIp: toBin(ipInt),
+            binaryMask: toBin(maskInt)
+        };
     },
 
     isSameSubnet(ip1, ip2, mask) {
@@ -95,6 +173,11 @@ const NetworkEngine = {
         return (portName || '').split('.')[0];
     },
 
+    isL3Device(dev) {
+        if (!dev) return false;
+        return dev.type === 'router' || (dev.type === 'switch' && !!dev.ipRouting);
+    },
+
     isInterfaceUp(dev, portName) {
         const pObj = dev.ports[portName];
         if (!pObj || !pObj.up) return false;
@@ -107,8 +190,7 @@ const NetworkEngine = {
     },
 
     /**
-     * Evaluates Router ACL rules against a packet (protocol: 'icmp' | 'tcp', srcIp, dstIp)
-     * Returns { allowed: boolean, matchedRule: object | null }
+     * Evaluates Router Standard (1-99) and Extended (100-199) ACL rules
      */
     evaluateRouterAcl(router, protocol, srcIp, dstIp) {
         const rules = router.acls || [];
@@ -129,7 +211,7 @@ const NetworkEngine = {
             if (!protoMatch) continue;
 
             const srcMatch = matchIpCriterion(srcIp, r.src, r.srcWildcard);
-            const dstMatch = matchIpCriterion(dstIp, r.dst, r.dstWildcard);
+            const dstMatch = matchIpCriterion(dstIp, r.dst || 'any', r.dstWildcard);
 
             if (srcMatch && dstMatch) {
                 r.hits = (r.hits || 0) + 1;
@@ -137,18 +219,18 @@ const NetworkEngine = {
             }
         }
 
-        // If user added rules, default permit unless explicitly matched (or if an explicit deny any any is at the end)
         return { allowed: true, matchedRule: null };
     },
 
     /**
-     * Checks if NAT / PAT applies when leaving `router` on `outPort`
+     * Checks if Static NAT or Dynamic NAT/PAT Overload applies when leaving `router` on `outPort`
      */
     applyRouterNat(router, inPort, outPort, currentSrcIp, dstIp, protocol) {
         const outObj = router.ports[outPort];
         const inObj = router.ports[inPort];
         const isNatTrigger =
             router.natEnabled ||
+            (router.staticNat && router.staticNat.length > 0) ||
             (inObj?.nat === 'inside' && outObj?.nat === 'outside') ||
             (outObj?.nat === 'outside');
 
@@ -156,8 +238,13 @@ const NetworkEngine = {
         if (currentSrcIp === outObj.ip) return currentSrcIp;
 
         router.natTranslations = router.natTranslations || [];
+
+        // Check Static NAT first (ip nat inside source static <local> <global>)
+        const staticEntry = (router.staticNat || []).find(s => s.insideLocal === currentSrcIp);
+        const translatedIp = staticEntry ? staticEntry.insideGlobal : outObj.ip;
+
         const portNum = protocol === 'tcp' ? 80 : 1024 + (router.natTranslations.length % 500);
-        const insideGlobal = `${outObj.ip}:${portNum}`;
+        const insideGlobal = `${translatedIp}:${portNum}`;
         const insideLocal = `${currentSrcIp}:${portNum}`;
         const outsideGlobal = `${dstIp}:${protocol === 'tcp' ? 80 : 0}`;
 
@@ -172,7 +259,7 @@ const NetworkEngine = {
             if (router.natTranslations.length > 20) router.natTranslations.pop();
         }
 
-        return outObj.ip;
+        return translatedIp;
     },
 
     /**
@@ -212,9 +299,10 @@ const NetworkEngine = {
 
                 if (isTrunk) {
                     frameVlan = frameVlan || 1;
-                    taggedOnWire = true;
+                    const nativeVlan = swPort?.nativeVlan || 1;
+                    taggedOnWire = Number(frameVlan) !== Number(nativeVlan);
                 } else {
-                    if (frameVlan !== null && frameVlan !== portVlan) continue;
+                    if (frameVlan !== null && Number(frameVlan) !== Number(portVlan)) continue;
                     frameVlan = portVlan;
                     taggedOnWire = false;
                 }
@@ -250,7 +338,7 @@ const NetworkEngine = {
                 if (taggedOnWire) continue;
                 if (requiredVlan !== null && currentDev.type === 'switch') {
                     const outSwPort = currentDev.ports[myPhysPort];
-                    if (outSwPort?.mode !== 'trunk' && (outSwPort?.vlan || 1) !== requiredVlan) continue;
+                    if (outSwPort?.mode !== 'trunk' && Number(outSwPort?.vlan || 1) !== Number(requiredVlan)) continue;
                 }
             }
 
@@ -293,7 +381,7 @@ const NetworkEngine = {
                     if (detailed) {
                         const lastStep = detailed[detailed.length - 1];
                         const expectedPhysPort = this.getBasePortName(pName);
-                        if (!lastStep.inPort || lastStep.inPort === expectedPhysPort || dev.type === 'switch') {
+                        if (!lastStep.inPort || lastStep.inPort === expectedPhysPort || dev.type === 'switch' || pObj.isSvi) {
                             return {
                                 device: dev,
                                 port: pName,
@@ -309,7 +397,7 @@ const NetworkEngine = {
     },
 
     computeOspfRoutes(router, devices, cables) {
-        if (router.type !== 'router' || !router.ospf || !router.ospf.networks || router.ospf.networks.length === 0) {
+        if (!this.isL3Device(router) || !router.ospf || !router.ospf.networks || router.ospf.networks.length === 0) {
             return [];
         }
 
@@ -336,7 +424,7 @@ const NetworkEngine = {
         for (const [myPortName, myPortObj] of myOspfPorts) {
             const myMask = myPortObj.mask || '255.255.255.0';
             for (const other of devices) {
-                if (other.type !== 'router' || other.id === router.id) continue;
+                if (!this.isL3Device(other) || other.id === router.id) continue;
                 for (const [otherPort, otherObj] of Object.entries(other.ports)) {
                     if (!this.isInterfaceUp(other, otherPort) || !otherObj.ip) continue;
                     if (isInterfaceInOspf(other, otherObj) === null) continue;
@@ -383,7 +471,7 @@ const NetworkEngine = {
                 }
 
                 for (const nextRtr of devices) {
-                    if (nextRtr.type !== 'router' || visitedRtrs.has(nextRtr.id)) continue;
+                    if (!this.isL3Device(nextRtr) || visitedRtrs.has(nextRtr.id)) continue;
                     for (const [npName, npObj] of Object.entries(nextRtr.ports)) {
                         if (!this.isInterfaceUp(nextRtr, npName) || !npObj.ip) continue;
                         if (isInterfaceInOspf(nextRtr, npObj) === null) continue;
@@ -409,7 +497,7 @@ const NetworkEngine = {
     },
 
     getOspfNeighbors(router, devices, cables) {
-        if (router.type !== 'router' || !router.ospf || !router.ospf.networks) return [];
+        if (!this.isL3Device(router) || !router.ospf || !router.ospf.networks) return [];
         const neighbors = [];
 
         const isInterfaceInOspf = (rtr, pObj) => {
@@ -422,7 +510,7 @@ const NetworkEngine = {
             const myMask = myObj.mask || '255.255.255.0';
 
             for (const other of devices) {
-                if (other.type !== 'router' || other.id === router.id) continue;
+                if (!this.isL3Device(other) || other.id === router.id) continue;
                 for (const [otherPort, otherObj] of Object.entries(other.ports)) {
                     if (!this.isInterfaceUp(other, otherPort) || !isInterfaceInOspf(other, otherObj)) continue;
                     if (this.isSameSubnet(myObj.ip, otherObj.ip, myMask)) {
@@ -555,8 +643,8 @@ const NetworkEngine = {
                     dstIp,
                     ttl,
                     icmpType: l4ProtocolLabel,
-                    note: dev.type === 'switch'
-                        ? `Layer 2 Switch Forwarding (VLAN ${step.vlan || 1}${step.tagged ? ' • 802.1Q Tagged' : ' • Untagged'})`
+                    note: dev.type === 'switch' && !dev.ipRouting
+                        ? `Layer 2 Switch CAM Lookup (VLAN ${step.vlan || 1}${step.tagged ? ' • 802.1Q Tagged' : ' • Untagged'})`
                         : protocolNote
                 });
             }
@@ -565,7 +653,7 @@ const NetworkEngine = {
         let currentRouter = null;
         let currentRouterIngressPort = null;
 
-        if (srcDev.type !== 'router') {
+        if (!this.isL3Device(srcDev)) {
             if (this.isSameSubnet(srcIp, dstIp, srcMask)) {
                 const l2Detailed = this.findL2PathDetailed(srcDev.id, dstDev.id, devices, cables, null);
                 if (!l2Detailed) {
@@ -579,7 +667,7 @@ const NetworkEngine = {
                 }
                 const sMac = getMac(srcDev, srcPortName);
                 const dMac = getMac(dstDev, dstPortName);
-                appendL2SegmentWithOsi(l2Detailed, sMac, dMac, 'Direct Local Subnet Delivery (ARP Resolved)');
+                appendL2SegmentWithOsi(l2Detailed, sMac, dMac, 'ARP Broadcast (FFFF.FFFF.FFFF) ➔ Direct Local Subnet Delivery');
                 return {
                     success: true,
                     hops: hopsIds.map(id => devices.find(d => d.id === id)),
@@ -600,10 +688,10 @@ const NetworkEngine = {
             }
 
             const gwTarget = this.findDeviceByIpOnL2(srcDev, srcPortName, srcDev.gateway, devices, cables);
-            if (!gwTarget || gwTarget.device.type !== 'router') {
+            if (!gwTarget || !this.isL3Device(gwTarget.device)) {
                 return {
                     success: false,
-                    reason: `${srcDev.name}: ไม่สามารถติดต่อ Default Gateway (${srcDev.gateway}) ได้`,
+                    reason: `${srcDev.name}: ไม่สามารถติดต่อ Default Gateway (${srcDev.gateway}) ได้ (ตรวจสอบ IP Gateway หรือคำสั่ง ip routing บน L3 Switch)`,
                     hops: hopsIds.map(id => devices.find(d => d.id === id)),
                     routerHopIps,
                     osiSteps
@@ -612,7 +700,7 @@ const NetworkEngine = {
 
             const sMac = getMac(srcDev, srcPortName);
             const gwMac = getMac(gwTarget.device, gwTarget.port);
-            appendL2SegmentWithOsi(gwTarget.detailedPath, sMac, gwMac, `Sent to Default Gateway (${gwTarget.device.name} - ${srcDev.gateway})`);
+            appendL2SegmentWithOsi(gwTarget.detailedPath, sMac, gwMac, `ARP Resolved Gateway (${gwTarget.device.name} - ${srcDev.gateway})`);
             currentRouter = gwTarget.device;
             currentRouterIngressPort = gwTarget.port;
             routerHopIps.push({ ip: srcDev.gateway, name: gwTarget.device.name });
@@ -636,7 +724,7 @@ const NetworkEngine = {
                 dstIp,
                 ttl,
                 icmpType: l4ProtocolLabel,
-                note: `Originating Router L3 Lookup on ${srcDev.name}`
+                note: `Originating L3 Routing Lookup on ${srcDev.name}`
             });
         }
 
@@ -656,11 +744,11 @@ const NetworkEngine = {
             visitedRouters.add(currentRouter.id);
             routerNames.push(currentRouter.name);
 
-            // 1. Evaluate Extended ACL Firewall Rules on currentRouter
+            // 1. Evaluate ACL Firewall Rules on currentRouter
             const aclCheck = this.evaluateRouterAcl(currentRouter, rawProto, activeSrcIp, dstIp);
             if (!aclCheck.allowed) {
                 const r = aclCheck.matchedRule;
-                const aclMsg = `🛡️ ถูกบล็อกโดย Firewall ACL ${r.id} บน ${currentRouter.name}: [deny ${r.protocol} ${r.src} ➔ ${r.dst}]`;
+                const aclMsg = `🛡️ ถูกบล็อกโดย Firewall ACL ${r.id} บน ${currentRouter.name}: [deny ${r.protocol} ${r.src} ➔ ${r.dst || 'any'}]`;
                 const lastOsi = osiSteps[osiSteps.length - 1];
                 if (lastOsi && lastOsi.deviceId === currentRouter.id) {
                     lastOsi.note = aclMsg;
@@ -714,7 +802,7 @@ const NetworkEngine = {
                 // Apply NAT if leaving an outside interface
                 const prevIp = activeSrcIp;
                 activeSrcIp = this.applyRouterNat(currentRouter, currentRouterIngressPort, route.outPort, activeSrcIp, dstIp, rawProto);
-                const natNote = prevIp !== activeSrcIp ? ` • NAT Overload (${prevIp} ➔ ${activeSrcIp})` : '';
+                const natNote = prevIp !== activeSrcIp ? ` • NAT (${prevIp} ➔ ${activeSrcIp})` : '';
 
                 const rtrOutMac = getMac(currentRouter, route.outPort);
                 const finalDstMac = getMac(dstDev, dstPortName);
@@ -775,7 +863,7 @@ const NetworkEngine = {
                     return {
                         success: true,
                         hops: hopsIds.map(id => devices.find(d => d.id === id)),
-                        routedVia: routerNames,
+                        routedVia: [...routerNames, nextHopTarget.device.name],
                         routerHopIps,
                         osiSteps
                     };
@@ -794,16 +882,10 @@ const NetworkEngine = {
         };
     },
 
-    /**
-     * Simulates ICMP Ping from srcDev to dstDev
-     */
     simulatePing(srcDev, dstDev, devices, cables) {
         return this.simulateL4Packet(srcDev, dstDev, devices, cables, 'icmp');
     },
 
-    /**
-     * Simulates HTTP GET Request (TCP Port 80) from srcDev to dstDev
-     */
     simulateHttp(srcDev, dstDev, devices, cables) {
         return this.simulateL4Packet(srcDev, dstDev, devices, cables, 'tcp');
     },
@@ -835,16 +917,19 @@ const NetworkEngine = {
         const dstIp = dstPortObj.ip;
         const dstMask = dstPortObj.mask || '255.255.255.0';
 
-        const reqLabel = rawProto === 'tcp' ? 'TCP Port 80 (HTTP GET /index.html)' : 'ICMP Echo Request (Type 8, Code 0)';
-        const repLabel = rawProto === 'tcp' ? 'TCP Port 80 (HTTP 200 OK)' : 'ICMP Echo Reply (Type 0, Code 0)';
+        const reqLabel = rawProto === 'tcp'
+            ? 'TCP [SYN ➔ SYN-ACK ➔ ACK] + HTTP GET :80'
+            : 'ICMP Echo Request (Type 8, Code 0)';
+        const repLabel = rawProto === 'tcp'
+            ? 'TCP Port 80 (HTTP/1.1 200 OK)'
+            : 'ICMP Echo Reply (Type 0, Code 0)';
 
         const forward = this.tracePath(srcDev, srcPort, srcIp, srcMask, dstDev, dstPort, dstIp, devices, cables, reqLabel, rawProto);
         if (!forward.success) {
             return forward;
         }
 
-        // If destination is an ISP Cloud or NAT was used, return path uses stateful NAT or normal routing
-        const hasNatOnPath = devices.some(d => d.type === 'router' && (d.natEnabled || Object.values(d.ports).some(p => p.nat === 'outside')));
+        const hasNatOnPath = devices.some(d => d.type === 'router' && (d.natEnabled || (d.staticNat && d.staticNat.length > 0) || Object.values(d.ports).some(p => p.nat === 'outside')));
         if (!hasNatOnPath && dstDev.type !== 'cloud') {
             const reply = this.tracePath(dstDev, dstPort, dstIp, dstMask, srcDev, srcPort, srcIp, devices, cables, repLabel, rawProto);
             if (!reply.success) {
@@ -857,7 +942,7 @@ const NetworkEngine = {
             }
         }
 
-        const protoTitle = rawProto === 'tcp' ? 'HTTP 200 OK' : 'Ping สำเร็จ';
+        const protoTitle = rawProto === 'tcp' ? 'HTTP 200 OK (TCP Handshake สำเร็จ)' : 'Ping สำเร็จ';
         const routeDesc = forward.routedVia && forward.routedVia.length > 0
             ? `Routed via ${forward.routedVia.join(' ➔ ')}: ${srcIp} ➔ ${dstIp}, RTT = ${forward.routedVia.length * 2}ms`
             : `Local Subnet ${this.getNetworkAddress(srcIp, srcMask)}/${this.maskToCidr(srcMask)}, RTT < 1ms`;
@@ -884,7 +969,7 @@ const NetworkEngine = {
         });
 
         for (const rtr of devices) {
-            if (rtr.type !== 'router') continue;
+            if (!this.isL3Device(rtr)) continue;
             for (const [rPort, rObj] of Object.entries(rtr.ports)) {
                 if (!rObj.ip || !this.isInterfaceUp(rtr, rPort)) continue;
                 const reqVlan = rObj.vlan ? Number(rObj.vlan) : null;
@@ -893,7 +978,7 @@ const NetworkEngine = {
 
                 const lastStep = l2[l2.length - 1];
                 const basePort = this.getBasePortName(rPort);
-                if (lastStep.inPort && lastStep.inPort !== basePort) continue;
+                if (lastStep.inPort && lastStep.inPort !== basePort && !rObj.isSvi) continue;
 
                 const gwIp = rObj.ip;
                 const mask = rObj.mask || '255.255.255.0';
@@ -904,6 +989,7 @@ const NetworkEngine = {
                     if (!usedIps.has(candidateIp) && candidateIp !== gwIp) {
                         hostDev.ports[hostPort].ip = candidateIp;
                         hostDev.ports[hostPort].mask = mask;
+                        hostDev.ports[hostPort].up = true;
                         hostDev.ports[hostPort].dhcp = true;
                         hostDev.gateway = gwIp;
                         return {
@@ -912,7 +998,7 @@ const NetworkEngine = {
                             mask,
                             gateway: gwIp,
                             dhcpServer: rtr.name,
-                            hops: l2.map(s => devices.find(d => d.id === s.devId))
+                            vlan: reqVlan || 1
                         };
                     }
                 }
@@ -921,7 +1007,7 @@ const NetworkEngine = {
 
         return {
             success: false,
-            reason: `DHCP Discover failed: ไม่พบ Router / DHCP Server ที่เชื่อมต่อถึง ${hostDev.name} ใน VLAN เดียวกัน`
+            reason: 'ไม่พบ DHCP Server (Router / L3 Switch) ที่เปิดพอร์ตอยู่ในวงแลนหรือ VLAN เดียวกัน'
         };
     }
 };

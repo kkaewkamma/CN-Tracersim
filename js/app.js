@@ -20,10 +20,22 @@ const appState = {
         CanvasUI.init();
         const restored = this.loadFromLocalStorage();
         if (!restored) {
-            this.loadPresetTopology('subnets', false);
+            this.loadPresetTopology('troubleshoot', false);
         }
         this.setTool('select');
-        this.logEvent('SYSTEM', 'NetSim Touch v4.0 Ultimate พร้อมใช้งาน (OSPF, 802.1Q, ACL Firewall, NAT, HTTP Port 80, PKA Auto-Grader)', 'info');
+        if (window.AcademyTutor) {
+            window.AcademyTutor.init();
+        }
+        this.logEvent('SYSTEM', 'NetSim Touch v5.0 Academy Edition พร้อมใช้งาน (13 บทเรียนวิชา Network + ระบบผู้ช่วยฝึกสอน CLI ทีละขั้น)', 'info');
+    },
+
+    getDevice(id) {
+        return this.devices.find(d => d.id === id) || null;
+    },
+
+    selectDevice(id) {
+        this.selectedDeviceId = id;
+        this.renderAll();
     },
 
     toggleSimMode() {

@@ -273,9 +273,22 @@ const CanvasUI = {
                     badges += `<span class="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-mono">NAT</span>`;
                 }
             }
+            if (dev.type === 'switch' && dev.ipRouting) {
+                badges += `<span class="px-1.5 py-0.2 rounded bg-purple-500/25 text-purple-300 border border-purple-500/40 text-[9px] font-mono">L3-SW</span>`;
+            }
+            if (dev.ipv6Routing || Object.values(dev.ports).some(p => p.ipv6)) {
+                badges += `<span class="px-1.5 py-0.2 rounded bg-sky-500/25 text-sky-300 border border-sky-500/40 text-[9px] font-mono">IPv6</span>`;
+            }
+
+            const nextTutorStep = window.AcademyTutor ? window.AcademyTutor.getNextPendingStep() : null;
+            const isTutorTarget = nextTutorStep && nextTutorStep.device && nextTutorStep.device.toLowerCase() === dev.name.toLowerCase();
+            const tutorHighlightHtml = isTutorTarget
+                ? `<div class="mb-1 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[9px] shadow-lg animate-bounce whitespace-nowrap">🎯 แตะฝึก CLI ขั้นที่ ${nextTutorStep.index + 1}</div>`
+                : '';
 
             el.innerHTML = `
-                <div class="device-icon-box w-14 h-14 rounded-2xl border-2 ${isSelected ? 'border-cyan-400 bg-slate-800' : 'border-slate-700 bg-slate-900/90'} flex items-center justify-center shadow-xl backdrop-blur-sm transition">
+                ${tutorHighlightHtml}
+                <div class="device-icon-box w-14 h-14 rounded-2xl border-2 ${isSelected ? 'border-cyan-400 bg-slate-800' : isTutorTarget ? 'border-amber-400 bg-slate-800/95 ring-4 ring-amber-400/25' : 'border-slate-700 bg-slate-900/90'} flex items-center justify-center shadow-xl backdrop-blur-sm transition">
                     ${this.getDeviceSvgIcon(dev.type)}
                 </div>
                 <div class="mt-1 px-2.5 py-0.5 rounded-lg bg-slate-900/90 border border-slate-700/80 text-[11px] font-bold text-white shadow-md flex items-center gap-1">

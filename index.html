@@ -53,9 +53,9 @@
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">NetSim <span class="text-cyan-400">Touch</span></h1>
-                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">v4.0 ULTIMATE</span>
+                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300 border border-cyan-500/40 font-bold">v5.0 ACADEMY</span>
                 </div>
-                <p class="text-[11px] text-slate-400 hidden xl:block">Cisco IOS • OSPF • 802.1Q • ACL Firewall • NAT • OSI 7-Layer</p>
+                <p class="text-[11px] text-slate-400 hidden xl:block">Interactive Network Course (13 บทตาม Syllabus) & Guided Cisco CLI Tutor</p>
             </div>
         </div>
 
@@ -65,20 +65,27 @@
         </div>
 
         <div class="flex items-center gap-1.5 sm:gap-2">
-            <button onclick="ModalController.openGraderModal()" class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold flex items-center gap-1.5 transition shadow" title="ตรวจคะแนนแล็บอัตโนมัติ (PKA Grader)">
+            <button onclick="AcademyTutor.openAcademyModal('lessons')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 active:scale-95 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-cyan-500/20" title="เปิดบทเรียนวิชา Network ครบ 13 หัวข้อตามตารางสอน">
+                <span>🎓</span>
+                <span class="hidden sm:inline">บทเรียน & ฝึกสอน (13 บท)</span>
+                <span class="sm:hidden">บทเรียน</span>
+            </button>
+            <button onclick="AcademyTutor.openAcademyModal('subnet')" class="px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 active:scale-95 text-purple-300 border border-purple-500/40 text-xs font-semibold hidden md:flex items-center gap-1 transition" title="เครื่องคิดเลขคำนวณ Subnet / VLSM / CIDR">
+                <span>🧮 Subnet</span>
+            </button>
+            <button onclick="ModalController.openGraderModal()" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold flex items-center gap-1 transition shadow" title="ตรวจคะแนนแล็บอัตโนมัติ (PKA Grader)">
                 <span>🏆</span>
                 <span id="liveGradeScoreText">Score: 100%</span>
             </button>
             <button id="btnSimModeToggle" onclick="window.appState.toggleSimMode()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="สลับโหมด Realtime / Step-by-Step">
                 <span>⚡ Realtime</span>
             </button>
-            <button onclick="ModalController.openPresetModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1.5 transition">
-                <span class="hidden sm:inline">📚 โจทย์แล็บ (7 Labs)</span>
-                <span class="sm:hidden">📚 แล็บ</span>
+            <button onclick="ModalController.openPresetModal()" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1 transition">
+                <span class="hidden sm:inline">📚 7 แล็บ</span>
+                <span class="sm:hidden">📚</span>
             </button>
-            <button onclick="ModalController.openLabModal()" class="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:scale-95 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center gap-1 transition">
+            <button onclick="ModalController.openLabModal()" class="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:scale-95 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center gap-1 transition" title="บันทึก/โหลดไฟล์ JSON">
                 <span>💾</span>
-                <span class="hidden sm:inline">บันทึก</span>
             </button>
             <button onclick="window.appState.loadPresetTopology('blank')" class="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 text-xs font-medium transition" title="ล้างกระดาน">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -185,23 +192,39 @@
             </div>
         </main>
 
-        <!-- RIGHT SIDEBAR (EVENT LOG & ARP/IP TABLE) -->
-        <aside class="w-72 lg:w-80 bg-cisco-panel border-l border-cisco-border flex flex-col z-20 shrink-0 hidden md:flex">
-            <div class="px-3.5 py-2.5 border-b border-cisco-border flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-slate-200">PDU & Simulation Log</h2>
-                </div>
-                <button onclick="window.appState.clearEventLog()" class="text-[11px] text-slate-400 hover:text-white transition">ล้างประวัติ</button>
+        <!-- RIGHT SIDEBAR (GUIDED CLI COACH + EVENT LOG & ARP/IP TABLE) -->
+        <aside class="w-80 lg:w-96 bg-cisco-panel border-l border-cisco-border flex flex-col z-20 shrink-0 hidden md:flex">
+            <!-- Dual Tab Switcher -->
+            <div class="flex border-b border-cisco-border bg-slate-900/90 shrink-0">
+                <button id="tabRightCoach" onclick="AcademyTutor.switchRightSidebarTab('coach')" class="flex-1 py-2.5 text-xs font-bold border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 transition">
+                    🎓 โค้ชฝึกสอน CLI (Coach)
+                </button>
+                <button id="tabRightLogs" onclick="AcademyTutor.switchRightSidebarTab('logs')" class="flex-1 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition">
+                    📡 ทราฟฟิก & ARP (Logs)
+                </button>
             </div>
-            <div id="eventLogList" class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-mono"></div>
-            
-            <div class="border-t border-cisco-border p-3 bg-slate-900/70">
-                <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
-                    <span>ตารางสถานะ IP อุปกรณ์ (Live ARP)</span>
-                    <span id="deviceCountBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 text-[10px] font-bold border border-slate-700">0 Nodes</span>
+
+            <!-- Tab 1: Guided CLI Tutor & Theory -->
+            <div id="rightCoachContainer" class="flex-1 flex flex-col overflow-hidden"></div>
+
+            <!-- Tab 2: Live Packet Logs & ARP Table -->
+            <div id="rightLogsContainer" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="px-3.5 py-2 border-b border-cisco-border flex items-center justify-between bg-slate-900/50">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-300">PDU & Simulation Log</h2>
+                    </div>
+                    <button onclick="window.appState.clearEventLog()" class="text-[11px] text-slate-400 hover:text-white transition">ล้างประวัติ</button>
                 </div>
-                <div id="ipSummaryList" class="max-h-40 overflow-y-auto space-y-1.5 text-[11px] font-mono text-slate-300"></div>
+                <div id="eventLogList" class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-mono"></div>
+                
+                <div class="border-t border-cisco-border p-3 bg-slate-900/70">
+                    <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                        <span>ตารางสถานะ IP อุปกรณ์ (Live ARP)</span>
+                        <span id="deviceCountBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 text-[10px] font-bold border border-slate-700">0 Nodes</span>
+                    </div>
+                    <div id="ipSummaryList" class="max-h-44 overflow-y-auto space-y-1.5 text-[11px] font-mono text-slate-300"></div>
+                </div>
             </div>
         </aside>
     </div>
@@ -391,8 +414,11 @@
 
             <!-- Tab Content: CLI -->
             <div id="tabContentCli" class="hidden flex-1 flex flex-col bg-[#070b10] overflow-hidden">
+                <!-- Live Step-by-Step Coach Banner Inside Terminal -->
+                <div id="cliTutorBanner" class="px-3.5 py-2 bg-gradient-to-r from-cyan-950/80 via-slate-900 to-slate-900 border-b border-cyan-500/30 flex items-center justify-between shrink-0"></div>
+
                 <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto shrink-0">
-                    <span class="text-[10px] font-mono text-slate-400 mr-1 shrink-0">ปุ่มลัด iPad:</span>
+                    <span class="text-[10px] font-mono text-slate-400 mr-1 shrink-0">ปุ่มลัดคำสั่ง:</span>
                     <div id="cliQuickChips" class="flex items-center gap-1.5"></div>
                 </div>
                 <div id="cliTerminalOutput" class="flex-1 p-4 overflow-y-auto font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap leading-relaxed selectable-text" onclick="document.getElementById('cliInput').focus()"></div>
@@ -403,6 +429,75 @@
                     <button type="button" onclick="ModalController.triggerCliTabComplete()" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-mono text-xs font-bold" title="เติมคำสั่งอัตโนมัติ (Tab)">Tab ⇥</button>
                     <button type="submit" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-mono font-bold text-xs">Enter ↵</button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACADEMY COURSE, SUBNET CALCULATOR & CHEAT SHEET MODAL -->
+    <div id="academyModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-5xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-900 border-b border-cisco-border flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-500 flex items-center justify-center text-slate-950 font-bold text-lg shadow">🎓</div>
+                    <div>
+                        <h3 class="font-bold text-base text-white">ศูนย์การเรียนรู้และฝึกปฏิบัติวิชา Computer Networks (13 บทตาม Syllabus)</h3>
+                        <p class="text-xs text-slate-400">สรุปทฤษฎีเข้มข้น • จุดเน้นออกสอบ • เครื่องคิดเลข Subnet/VLSM • โค้ชฝึกพิมพ์คำสั่งจริงทีละขั้น</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="acadTabBtn-lessons" onclick="AcademyTutor.switchAcademyModalTab('lessons')" class="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow transition">📚 13 บทเรียนตามตารางสอน</button>
+                    <button id="acadTabBtn-subnet" onclick="AcademyTutor.switchAcademyModalTab('subnet')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">🧮 เครื่องคิดเลข Subnet & VLSM</button>
+                    <button id="acadTabBtn-cheatsheet" onclick="AcademyTutor.switchAcademyModalTab('cheatsheet')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition">⚡ สรุปคำสั่งสอบ CLI</button>
+                    <button onclick="AcademyTutor.closeAcademyModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold ml-1">✕</button>
+                </div>
+            </div>
+
+            <!-- Pane 1: 13 Course Modules -->
+            <div id="acadTabPane-lessons" class="flex-1 overflow-y-auto p-5">
+                <div id="academyLessonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- Pane 2: Interactive Subnetting / VLSM / CIDR Calculator -->
+            <div id="acadTabPane-subnet" class="hidden flex-1 overflow-y-auto p-5 space-y-4">
+                <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-bold text-white">🧮 เครื่องคำนวณ IPv4 Subnetting, CIDR, Wildcard Mask & Host Range</h4>
+                            <p class="text-xs text-slate-400">กรอก IP Address และเลือกขนาด Prefix (/8 ถึง /30) เพื่อดูขั้นตอนการคำนวณเลขฐานสองและช่วง IP ที่ใช้งานได้จริง</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">IPv4 Address</label>
+                            <input id="calcIpInput" type="text" value="192.168.10.65" oninput="AcademyTutor.updateSubnetCalculatorUI()" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 font-mono text-sm text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">CIDR Prefix Length (/Mask)</label>
+                            <select id="calcCidrSelect" onchange="AcademyTutor.updateSubnetCalculatorUI()" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 font-mono text-sm text-cyan-300 focus:outline-none focus:border-cyan-400">
+                                <option value="16">/16 (255.255.0.0 — 65,534 Hosts)</option>
+                                <option value="20">/20 (255.255.240.0 — 4,094 Hosts)</option>
+                                <option value="22">/22 (255.255.252.0 — 1,022 Hosts)</option>
+                                <option value="23">/23 (255.255.254.0 — 510 Hosts)</option>
+                                <option value="24">/24 (255.255.255.0 — 254 Hosts)</option>
+                                <option value="25">/25 (255.255.255.128 — 126 Hosts)</option>
+                                <option value="26" selected>/26 (255.255.255.192 — 62 Hosts)</option>
+                                <option value="27">/27 (255.255.255.224 — 30 Hosts)</option>
+                                <option value="28">/28 (255.255.255.240 — 14 Hosts)</option>
+                                <option value="29">/29 (255.255.255.248 — 6 Hosts)</option>
+                                <option value="30">/30 (255.255.255.252 — 2 Hosts WAN Point-to-Point)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="AcademyTutor.updateSubnetCalculatorUI()" class="w-full py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow">คำนวณผลลัพธ์ทันที</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="calcResultBox"></div>
+            </div>
+
+            <!-- Pane 3: Complete Cisco IOS Command Cheat Sheet -->
+            <div id="acadTabPane-cheatsheet" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyCheatSheetList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </div>
     </div>
@@ -550,6 +645,7 @@
     <!-- APPLICATION SCRIPTS -->
     <script src="./js/network-engine.js"></script>
     <script src="./js/cisco-cli.js"></script>
+    <script src="./js/academy-tutor.js"></script>
     <script src="./js/modals.js"></script>
     <script src="./js/canvas-ui.js"></script>
     <script src="./js/app.js"></script>

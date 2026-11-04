@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netsim-touch-v4.0-ultimate';
+const CACHE_NAME = 'netsim-touch-v5.0-academy';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './css/style.css',
   './js/network-engine.js',
   './js/cisco-cli.js',
+  './js/academy-tutor.js',
   './js/modals.js',
   './js/canvas-ui.js',
   './js/app.js',
