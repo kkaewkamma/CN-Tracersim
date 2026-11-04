@@ -55,3 +55,4 @@ export const CNLogo: React.FC<CNLogoProps> = ({ size = 28, className = '' }) => 
     </svg>
   );
 };
+

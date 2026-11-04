@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CN-Tracersim">
+    <meta name="theme-color" content="#0b111a">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" href="./icons/icon-192.svg">
+    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg">
+    <title>CN-Tracersim - Enterprise Network Simulator & Cisco IOS CLI</title>
+    
+    <!-- Offline Local Styling -->
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body class="text-slate-100 font-sans h-screen w-screen flex flex-col select-none overflow-hidden bg-cisco-dark">
+
+    <!-- Modern Architecture React Mount Point -->
+    
+
+    <!-- TOP NAVIGATION & STATUS BAR -->
+    <header class="h-14 bg-cisco-panel border-b border-cisco-border px-3 sm:px-5 flex items-center justify-between shrink-0 z-30 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="9" stroke-width="2"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7v10m-5-5h10M9 9l3-3 3 3M9 15l3 3 3-3"/>
+                </svg>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">CN <span class="text-cyan-400">Tracersim</span></h1>
+                    <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300 border border-cyan-500/40 font-bold">v5.2 CCNA</span>
+                </div>
+                <p class="text-[11px] text-slate-400 hidden xl:block">Interactive Network Course (13 บทตาม Syllabus) & Guided Cisco CLI Tutor</p>
+            </div>
+        </div>
+
+        <div id="modeBanner" class="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-xs font-medium text-cyan-300 shadow-inner">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span id="modeBannerText">โหมดเลือกและลากย้าย (แตะอุปกรณ์เพื่อเลือก, ลากพื้นหลังเพื่อเลื่อนกระดาน)</span>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <button onclick="AcademyTutor.openAcademyModal('lessons')" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 active:scale-95 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-cyan-500/20" title="เปิดบทเรียนวิชา Network ครบ 13 หัวข้อตามตารางสอน">
+                <span></span>
+                <span class="hidden sm:inline">บทเรียน & ฝึกสอน (13 บท)</span>
+                <span class="sm:hidden">บทเรียน</span>
+            </button>
+            <button onclick="AcademyTutor.openAcademyModal('subnet')" class="px-2.5 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 active:scale-95 text-purple-300 border border-purple-500/40 text-xs font-semibold hidden md:flex items-center gap-1 transition" title="เครื่องคิดเลขคำนวณ Subnet / VLSM / CIDR">
+                <span> Subnet</span>
+            </button>
+            <button onclick="ModalController.openGraderModal()" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-300 border border-amber-500/40 text-xs font-mono font-bold flex items-center gap-1 transition shadow" title="ตรวจคะแนนแล็บอัตโนมัติ (PKA Grader)">
+                <span></span>
+                <span id="liveGradeScoreText">Score: 100%</span>
+            </button>
+            <button id="btnSimModeToggle" onclick="window.appState.toggleSimMode()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="สลับโหมด Realtime / Step-by-Step">
+                <span> Realtime</span>
+            </button>
+            <button onclick="ModalController.openPresetModal()" class="px-2.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 active:scale-95 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1 transition">
+                <span class="hidden sm:inline"> 7 แล็บ</span>
+                <span class="sm:hidden"></span>
+            </button>
+            <button onclick="ModalController.openLabModal()" class="px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 active:scale-95 text-indigo-300 border border-indigo-500/30 text-xs font-medium flex items-center gap-1 transition" title="บันทึก/โหลดไฟล์ JSON">
+                <span></span>
+            </button>
+            <button onclick="window.appState.loadPresetTopology('blank')" class="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 active:scale-95 text-rose-300 border border-rose-500/30 text-xs font-medium transition" title="ล้างกระดาน">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE WORKSPACE -->
+    <div class="flex-1 flex relative overflow-hidden">
+        <!-- LEFT TOOLS PALETTE -->
+        <aside class="w-16 sm:w-20 bg-cisco-panel border-r border-cisco-border flex flex-col items-center py-2.5 gap-2 z-20 shrink-0 shadow-xl overflow-y-auto">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">เครื่องมือ</span>
+
+            <button id="tool-select" onclick="window.appState.setTool('select')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-cyan-500/20 text-cyan-300 border-2 border-cyan-400 transition active:scale-95 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                <span class="text-[10px] font-medium">เลือก/ย้าย</span>
+            </button>
+
+            <button id="tool-cable" onclick="window.appState.setTool('cable')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                <span class="text-[10px] font-medium">ต่อสายแลน</span>
+            </button>
+
+            <button id="tool-pdu" onclick="window.appState.setTool('pdu')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="text-[10px] font-medium">ส่ง Ping</span>
+            </button>
+
+            <button id="tool-http" onclick="window.appState.setTool('http')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                <span class="text-[9px] font-medium">เว็บ HTTP</span>
+            </button>
+
+            <button id="tool-delete" onclick="window.appState.setTool('delete')" class="tool-btn w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-slate-800/70 text-slate-300 border-2 border-transparent transition active:scale-95">
+                <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                <span class="text-[10px] font-medium">ลบออก</span>
+            </button>
+
+            <div class="w-10 border-t border-slate-700/80 my-0.5"></div>
+
+            <button id="btnOpenConfig" onclick="ModalController.openConfigModal(window.appState.selectedDeviceId)" disabled class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 disabled:opacity-30 disabled:pointer-events-none transition active:scale-95 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                <span class="text-[10px] font-medium">ตั้งค่า/CLI</span>
+            </button>
+
+            <button id="btnOpenPduInspector" onclick="ModalController.openPduInspectorModal(0)" class="hidden w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex flex-col items-center justify-center gap-1 bg-purple-600/25 text-purple-300 border border-purple-400/50 transition active:scale-95 shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                <span class="text-[9px] font-bold">OSI 7-Layer</span>
+            </button>
+        </aside>
+
+        <!-- TOPOLOGY CANVAS -->
+        <main id="canvasContainer" class="flex-1 relative bg-grid overflow-hidden cursor-grab active:cursor-grabbing">
+            <div id="canvasViewport" class="absolute inset-0 w-full h-full origin-top-left">
+                <svg id="cableLayer" class="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible"></svg>
+                <div id="nodesLayer" class="absolute inset-0 w-full h-full z-10"></div>
+                <div id="pduLayer" class="absolute inset-0 w-full h-full pointer-events-none z-20"></div>
+            </div>
+
+            <!-- INFINITE CANVAS ZOOM & PAN CONTROLS -->
+            <div class="absolute bottom-3 right-3 z-30 flex items-center gap-1 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1.5 shadow-xl">
+                <button onclick="CanvasUI.setZoom(CanvasUI.zoom - 0.1)" class="w-7 h-7 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center active:scale-95">➖</button>
+                <span id="zoomLevelBadge" class="px-2 font-mono text-[11px] font-bold text-cyan-300">100%</span>
+                <button onclick="CanvasUI.setZoom(CanvasUI.zoom + 0.1)" class="w-7 h-7 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center active:scale-95">➕</button>
+                <button onclick="CanvasUI.resetView()" class="px-2 h-7 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-mono active:scale-95" title="รีเซ็ตมุมมอง">Reset</button>
+            </div>
+
+            <!-- STEP-BY-STEP PDU SIMULATION CONTROLLER BAR -->
+            <div id="stepControlBar" class="hidden absolute top-16 right-4 z-30 bg-slate-900/95 backdrop-blur-md border-2 border-amber-400/60 rounded-2xl px-4 py-2.5 shadow-2xl flex items-center gap-3">
+                <div class="flex flex-col">
+                    <span class="text-[10px] font-mono uppercase text-amber-400 font-bold">Step-by-Step PDU Mode</span>
+                    <span id="stepControlLabel" class="text-xs font-mono font-bold text-white">Hop 1/3: PC1</span>
+                </div>
+                <button onclick="if(CanvasUI.activeStepController) CanvasUI.activeStepController.inspect()" class="px-3 py-1.5 rounded-xl bg-purple-500/25 hover:bg-purple-500/35 text-purple-200 border border-purple-400/40 text-xs font-bold active:scale-95">
+                     ดู OSI 7 Layers
+                </button>
+                <button onclick="if(CanvasUI.activeStepController) CanvasUI.activeStepController.next()" class="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold active:scale-95 shadow">
+                    Hop ถัดไป ⏭️
+                </button>
+            </div>
+
+            <!-- TROUBLESHOOTING MISSION BANNER -->
+            <div id="missionCard" class="hidden absolute bottom-3 left-3 z-30 max-w-xs bg-slate-900/95 backdrop-blur-md border border-amber-500/40 rounded-2xl p-3.5 shadow-2xl space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-amber-400"> ภารกิจซ่อมระบบล่ม (Lab 4)</span>
+                    <span class="text-[10px] font-mono text-slate-400">PC1 ➔ Payroll-SRV</span>
+                </div>
+                <div id="missionChecklist" class="space-y-1 font-mono"></div>
+            </div>
+
+            <!-- QUICK ACTION PILL (FLOATING ON SELECT) -->
+            <div id="quickActionPill" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-slate-900/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl px-4 py-2 shadow-2xl flex items-center gap-3">
+                <div class="flex flex-col">
+                    <span id="quickPillName" class="text-xs font-bold text-white">Router0</span>
+                    <span id="quickPillSub" class="text-[10px] font-mono text-cyan-400">Cisco 2911 Router</span>
+                </div>
+                <div class="h-6 w-px bg-slate-700"></div>
+                <button onclick="ModalController.openConfigModal(window.appState.selectedDeviceId, 'gui')" class="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 active:scale-95">
+                    <span>⚙️ ตั้งค่า GUI</span>
+                </button>
+                <button onclick="ModalController.openConfigModal(window.appState.selectedDeviceId, 'cli')" class="px-3 py-1.5 rounded-xl bg-indigo-500/25 hover:bg-indigo-500/35 text-indigo-200 border border-indigo-400/40 text-xs font-mono font-semibold flex items-center gap-1.5 active:scale-95">
+                    <span>>_ IOS CLI</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- RIGHT SIDEBAR (GUIDED CLI COACH + EVENT LOG & ARP/IP TABLE) -->
+        <aside class="w-80 lg:w-96 bg-cisco-panel border-l border-cisco-border flex flex-col z-20 shrink-0 hidden md:flex">
+            <!-- Dual Tab Switcher -->
+            <div class="flex border-b border-cisco-border bg-slate-900/90 shrink-0">
+                <button id="tabRightCoach" onclick="AcademyTutor.switchRightSidebarTab('coach')" class="flex-1 py-2.5 text-xs font-bold border-b-2 border-cyan-400 text-cyan-300 bg-cyan-500/10 transition">
+                     โค้ชฝึกสอน CLI (Coach)
+                </button>
+                <button id="tabRightLogs" onclick="AcademyTutor.switchRightSidebarTab('logs')" class="flex-1 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-400 hover:text-white transition">
+                     ทราฟฟิก & ARP (Logs)
+                </button>
+            </div>
+
+            <!-- Tab 1: Guided CLI Tutor & Theory -->
+            <div id="rightCoachContainer" class="flex-1 flex flex-col overflow-hidden"></div>
+
+            <!-- Tab 2: Live Packet Logs & ARP Table -->
+            <div id="rightLogsContainer" class="hidden flex-1 flex flex-col overflow-hidden">
+                <div class="px-3.5 py-2 border-b border-cisco-border flex items-center justify-between bg-slate-900/50">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <h2 class="text-[11px] font-bold uppercase tracking-wider text-slate-300">PDU & Simulation Log</h2>
+                    </div>
+                    <button onclick="window.appState.clearEventLog()" class="text-[11px] text-slate-400 hover:text-white transition">ล้างประวัติ</button>
+                </div>
+                <div id="eventLogList" class="flex-1 overflow-y-auto p-2.5 space-y-2 text-xs font-mono"></div>
+                
+                <div class="border-t border-cisco-border p-3 bg-slate-900/70">
+                    <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                        <span>ตารางสถานะ IP อุปกรณ์ (Live ARP)</span>
+                        <span id="deviceCountBadge" class="px-2 py-0.5 rounded-full bg-slate-800 text-cyan-400 text-[10px] font-bold border border-slate-700">0 Nodes</span>
+                    </div>
+                    <div id="ipSummaryList" class="max-h-44 overflow-y-auto space-y-1.5 text-[11px] font-mono text-slate-300"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- BOTTOM PALETTE (ADD DEVICES) -->
+    <footer class="h-20 bg-cisco-panel border-t border-cisco-border px-3 sm:px-6 flex items-center justify-between z-30 shrink-0">
+        <div class="flex items-center gap-2.5 sm:gap-3.5 overflow-x-auto py-1">
+            <span class="text-xs font-semibold text-slate-400 mr-1 hidden lg:inline">เพิ่มอุปกรณ์ (แตะเพื่อวาง):</span>
+            
+            <button onclick="window.appState.addDeviceFromPalette('router')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v4m0 2v4m-5-5h4m2 0h4M9 9l2 2m4 4l2 2m0-8l-2 2m-4 4l-2 2"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Router</div><div class="text-[10px] text-slate-400 font-mono">Cisco 2911</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('switch')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h6m-2-2l2 2-2 2M17 14h-6m2-2l-2 2 2 2"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Switch</div><div class="text-[10px] text-slate-400 font-mono">Catalyst 2960</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('pc')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-teal-500/20 border border-teal-400/40 flex items-center justify-center text-teal-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8m-4-4v4"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ PC Host</div><div class="text-[10px] text-slate-400 font-mono">Workstation</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('server')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="6" rx="1.5"/><rect x="4" y="9" width="16" height="6" rx="1.5"/><rect x="4" y="15" width="16" height="6" rx="1.5"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ Server</div><div class="text-[10px] text-slate-400 font-mono">Web Server</div></div>
+            </button>
+
+            <button onclick="window.appState.addDeviceFromPalette('cloud')" class="flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-slate-800/90 hover:bg-slate-700/80 active:scale-95 border border-slate-700 transition shrink-0 shadow">
+                <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                </div>
+                <div class="text-left"><div class="text-xs font-bold text-white">+ ISP Cloud</div><div class="text-[10px] text-slate-400 font-mono">WAN Public</div></div>
+            </button>
+        </div>
+    </footer>
+
+    <!-- PORT SELECTOR MODAL -->
+    <div id="portModal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-md w-full p-5 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="font-bold text-base text-white">เลือกพอร์ตเชื่อมต่อสายสัญญาณ</h3>
+                <button onclick="ModalController.closePortModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-4 my-4">
+                <div>
+                    <div id="portSourceTitle" class="text-xs font-bold text-cyan-400 mb-2 truncate">ต้นทาง:</div>
+                    <div id="portSourceList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+                <div>
+                    <div id="portTargetTitle" class="text-xs font-bold text-emerald-400 mb-2 truncate">ปลายทาง:</div>
+                    <div id="portTargetList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                <button onclick="ModalController.closePortModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">ยกเลิก</button>
+                <button onclick="ModalController.confirmCableConnection()" class="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 text-xs font-bold shadow-lg">เสียบสายแลน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIG / CLI MODAL -->
+    <div id="configModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-3xl w-full h-[90vh] max-h-[760px] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-5 py-3.5 bg-slate-900 border-b border-cisco-border flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div id="modalDeviceBadge" class="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-300 font-bold text-sm">R</div>
+                    <div>
+                        <h3 id="modalDeviceTitle" class="font-bold text-base text-white">Router0</h3>
+                        <p id="modalDeviceSub" class="text-xs text-slate-400 font-mono">Cisco IOS Software</p>
+                    </div>
+                </div>
+                <div class="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700">
+                    <button id="tabBtnGui" onclick="ModalController.switchConfigTab('gui')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition bg-cyan-500 text-slate-950">⚙️ ตั้งค่า GUI</button>
+                    <button id="tabBtnCli" onclick="ModalController.switchConfigTab('cli')" class="px-3.5 py-1.5 rounded-lg text-xs font-mono font-semibold transition text-slate-400 hover:text-white">>_ IOS CLI</button>
+                </div>
+                <button onclick="ModalController.closeConfigModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <!-- Tab Content: GUI -->
+            <div id="tabContentGui" class="flex-1 overflow-y-auto p-5 space-y-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/70 p-4 rounded-2xl border border-slate-800">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Hostname (ชื่ออุปกรณ์)</label>
+                        <input id="guiHostname" type="text" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400" onchange="ModalController.saveGuiHostname(this.value)">
+                    </div>
+                    <div id="guiGatewayBox">
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Default Gateway (เราเตอร์ชี้ทาง)</label>
+                        <input id="guiGateway" type="text" placeholder="เช่น 192.168.10.1" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono text-sm focus:outline-none focus:border-cyan-400" onchange="ModalController.saveGuiGateway(this.value)">
+                    </div>
+                </div>
+
+                <!-- 1-Tap DHCP DORA Client Action for PC / Server -->
+                <div id="guiDhcpActionBox" class="hidden p-3.5 rounded-2xl bg-emerald-950/25 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <div class="text-xs font-bold text-emerald-300">DHCP Client (Dynamic Host Configuration Protocol)</div>
+                        <div class="text-[11px] text-slate-400">ขอรับ IP Address, Subnet Mask และ Default Gateway อัตโนมัติจาก Router ในวงแลน</div>
+                    </div>
+                    <button onclick="ModalController.triggerGuiDhcpRequest()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs shadow">
+                         ขอรับ IP ด้วย DHCP (DORA)
+                    </button>
+                </div>
+
+                <!-- Router 802.1Q Sub-interface Creator -->
+                <div id="guiAddSubIfBox" class="hidden p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/30 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-purple-300">802.1Q Sub-interfaces (Router-on-a-Stick Inter-VLAN)</span>
+                        <span class="text-[10px] font-mono text-slate-400">encapsulation dot1Q</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                        <select id="newSubIfBase" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                            <option value="Gig0/0">Gig0/0</option>
+                            <option value="Gig0/1">Gig0/1</option>
+                            <option value="Gig0/2">Gig0/2</option>
+                        </select>
+                        <input id="newSubIfVlan" type="number" min="1" max="4094" placeholder="VLAN ID (เช่น 10)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <input id="newSubIfIp" type="text" placeholder="Gateway IP (192.168.10.1)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <button onclick="ModalController.addRouterSubInterfaceFromGui()" class="px-3 py-1.5 rounded-xl bg-purple-500 hover:bg-purple-400 active:scale-95 text-slate-950 font-bold text-xs">+ สร้าง Sub-if</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-400 mb-3">Interfaces & Ports Configuration</h4>
+                    <div id="guiInterfacesList" class="space-y-3"></div>
+                </div>
+
+                <!-- Router ACL Firewall & NAT Overload Editor -->
+                <div id="guiAclNatBox" class="hidden pt-2 border-t border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400"> Extended ACL Firewall & NAT Overload</h4>
+                        <label class="flex items-center gap-2 cursor-pointer bg-slate-900 px-3 py-1 rounded-xl border border-slate-700">
+                            <input id="guiNatToggle" type="checkbox" onchange="ModalController.toggleRouterNat(this.checked)" class="w-4 h-4 rounded text-emerald-500">
+                            <span class="text-xs font-mono font-bold text-emerald-300">เปิดใช้งาน NAT/PAT Overload</span>
+                        </label>
+                    </div>
+                    <div id="guiAclList" class="space-y-2"></div>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                        <select id="newAclAction" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                            <option value="deny">DENY (บล็อก)</option>
+                            <option value="permit">PERMIT (อนุญาต)</option>
+                        </select>
+                        <select id="newAclProto" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                            <option value="icmp">ICMP (Ping)</option>
+                            <option value="tcp">TCP Port 80 (HTTP)</option>
+                            <option value="ip">IP (ทั้งหมด)</option>
+                        </select>
+                        <input id="newAclSrc" type="text" placeholder="Src IP หรือ any" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <input id="newAclDst" type="text" placeholder="Dst IP หรือ any" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <button onclick="ModalController.addAclRuleFromGui()" class="col-span-2 sm:col-span-1 px-3 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 active:scale-95 text-white font-bold text-xs">+ เพิ่มกฎ ACL</button>
+                    </div>
+                </div>
+
+                <!-- Router OSPF Dynamic Routing Editor -->
+                <div id="guiOspfBox" class="hidden pt-2 border-t border-slate-800 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400">OSPF Dynamic Routing (router ospf 1)</h4>
+                    <div id="guiOspfNetworksList" class="space-y-2"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                        <input id="newOspfNet" type="text" placeholder="Network (192.168.10.0)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <input id="newOspfWildcard" type="text" value="0.0.0.255" placeholder="Wildcard (0.0.0.255)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <input id="newOspfArea" type="number" value="0" placeholder="Area ID (0)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white">
+                        <button onclick="ModalController.addOspfNetworkFromGui()" class="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-bold text-xs">+ ประกาศ OSPF</button>
+                    </div>
+                </div>
+
+                <!-- Router Static Routes Editor -->
+                <div id="guiStaticRoutesBox" class="hidden pt-2 border-t border-slate-800 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Static Routing Table (ip route)</h4>
+                    <div id="guiStaticRoutesList" class="space-y-2"></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-slate-900/70 p-3 rounded-2xl border border-slate-800">
+                        <input id="newRouteNet" type="text" placeholder="Destination Net (192.168.30.0)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white focus:outline-none focus:border-cyan-400">
+                        <input id="newRouteMask" type="text" value="255.255.255.0" placeholder="Subnet Mask" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white focus:outline-none focus:border-cyan-400">
+                        <input id="newRouteNextHop" type="text" placeholder="Next-Hop IP (10.0.0.2)" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 font-mono text-xs text-white focus:outline-none focus:border-cyan-400">
+                        <button onclick="ModalController.addStaticRouteFromGui()" class="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-bold text-xs">+ เพิ่ม Static Route</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: CLI -->
+            <div id="tabContentCli" class="hidden flex-1 flex flex-col bg-[#070b10] overflow-hidden">
+                <!-- Live Step-by-Step Coach Banner Inside Terminal -->
+                <div id="cliTutorBanner" class="px-3.5 py-2 bg-gradient-to-r from-cyan-950/80 via-slate-900 to-slate-900 border-b border-cyan-500/30 flex items-center justify-between shrink-0"></div>
+
+                <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center gap-1.5 overflow-x-auto shrink-0">
+                    <span class="text-[10px] font-mono text-slate-400 mr-1 shrink-0">ปุ่มลัดคำสั่ง:</span>
+                    <div id="cliQuickChips" class="flex items-center gap-1.5"></div>
+                </div>
+                <div id="cliTerminalOutput" class="flex-1 p-4 overflow-y-auto font-mono text-xs sm:text-sm text-emerald-400 whitespace-pre-wrap leading-relaxed selectable-text" onclick="document.getElementById('cliInput').focus()"></div>
+                <form onsubmit="event.preventDefault(); ModalController.submitCliCommand();" class="p-2.5 bg-slate-900 border-t border-slate-800 flex items-center gap-1.5 shrink-0">
+                    <span id="cliPromptLabel" class="font-mono text-xs sm:text-sm text-cyan-300 font-bold shrink-0">Router></span>
+                    <input id="cliInput" type="text" onkeydown="ModalController.handleCliKeyDown(event)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="พิมพ์คำสั่ง IOS (กด Tab เติมคำสั่ง, ลูกศรขึ้นดูประวัติ)..." class="flex-1 bg-transparent font-mono text-xs sm:text-sm text-white focus:outline-none">
+                    <button type="button" onclick="ModalController.triggerCliHistoryUp()" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-xs" title="คำสั่งก่อนหน้า">↑</button>
+                    <button type="button" onclick="ModalController.triggerCliTabComplete()" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-mono text-xs font-bold" title="เติมคำสั่งอัตโนมัติ (Tab)">Tab ⇥</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-slate-950 font-mono font-bold text-xs">Enter ↵</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACADEMY COURSE, 12 LABS, PRE/POST ASSESSMENT, SUBNET CALCULATOR & CHEAT SHEET MODAL -->
+    <div id="academyModal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-6xl w-full h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="px-5 py-3.5 bg-slate-900 border-b border-cisco-border flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-500 flex items-center justify-center text-slate-950 font-bold text-lg shadow"></div>
+                    <div>
+                        <h3 class="font-bold text-base text-white">ศูนย์การเรียนรู้ Cisco Networking Academy (NetAcad Curriculum & Assessment)</h3>
+                        <p class="text-xs text-slate-400">Learn ➔ Configure ➔ Simulate ➔ Inspect ➔ Troubleshoot ➔ Evaluate • อ้างอิงหลักสูตร NetAcad & Cisco IOS</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <button id="acadTabBtn-lessons" onclick="AcademyTutor.switchAcademyModalTab('lessons')" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 shadow transition"> บทเรียน & NetAcad Ref</button>
+                    <button id="acadTabBtn-labs" onclick="AcademyTutor.switchAcademyModalTab('labs')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition"> ใบงาน 12 Practical Labs</button>
+                    <button id="acadTabBtn-assessment" onclick="AcademyTutor.switchAcademyModalTab('assessment')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition"> สอบ Pre/Post-Test & Progress</button>
+                    <button id="acadTabBtn-subnet" onclick="AcademyTutor.switchAcademyModalTab('subnet')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition"> เครื่องคิดเลข Subnet</button>
+                    <button id="acadTabBtn-cheatsheet" onclick="AcademyTutor.switchAcademyModalTab('cheatsheet')" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-800/70 transition"> สรุปคำสั่ง CLI</button>
+                    <button onclick="AcademyTutor.closeAcademyModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center font-bold ml-1">✕</button>
+                </div>
+            </div>
+
+            <!-- Pane 1: NetAcad Course Modules with Reference Mapping & Simulation Scope -->
+            <div id="acadTabPane-lessons" class="flex-1 overflow-y-auto p-5">
+                <div id="academyLessonsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+            <!-- Pane 2: 12 Progressive Practical Labs (10-Part Full Lab Guide Sheets) -->
+            <div id="acadTabPane-labs" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyPracticalLabsBox" class="space-y-4"></div>
+            </div>
+
+            <!-- Pane 3: Pre-Test / Post-Test Assessment & Student Progress Tracker -->
+            <div id="acadTabPane-assessment" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyAssessmentBox" class="space-y-4"></div>
+            </div>
+
+            <!-- Pane 4: Interactive Subnetting / VLSM / CIDR Calculator -->
+            <div id="acadTabPane-subnet" class="hidden flex-1 overflow-y-auto p-5 space-y-4">
+                <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-bold text-white"> เครื่องคำนวณ IPv4 Subnetting, CIDR, Wildcard Mask & Host Range</h4>
+                            <p class="text-xs text-slate-400">กรอก IP Address และเลือกขนาด Prefix (/8 ถึง /30) เพื่อดูขั้นตอนการคำนวณเลขฐานสองและช่วง IP ที่ใช้งานได้จริง</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">IPv4 Address</label>
+                            <input id="calcIpInput" type="text" value="192.168.10.65" oninput="AcademyTutor.updateSubnetCalculatorUI()" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 font-mono text-sm text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-400 mb-1">CIDR Prefix Length (/Mask)</label>
+                            <select id="calcCidrSelect" onchange="AcademyTutor.updateSubnetCalculatorUI()" class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 font-mono text-sm text-cyan-300 focus:outline-none focus:border-cyan-400">
+                                <option value="16">/16 (255.255.0.0 — 65,534 Hosts)</option>
+                                <option value="20">/20 (255.255.240.0 — 4,094 Hosts)</option>
+                                <option value="22">/22 (255.255.252.0 — 1,022 Hosts)</option>
+                                <option value="23">/23 (255.255.254.0 — 510 Hosts)</option>
+                                <option value="24">/24 (255.255.255.0 — 254 Hosts)</option>
+                                <option value="25">/25 (255.255.255.128 — 126 Hosts)</option>
+                                <option value="26" selected>/26 (255.255.255.192 — 62 Hosts)</option>
+                                <option value="27">/27 (255.255.255.224 — 30 Hosts)</option>
+                                <option value="28">/28 (255.255.255.240 — 14 Hosts)</option>
+                                <option value="29">/29 (255.255.255.248 — 6 Hosts)</option>
+                                <option value="30">/30 (255.255.255.252 — 2 Hosts WAN Point-to-Point)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="AcademyTutor.updateSubnetCalculatorUI()" class="w-full py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow">คำนวณผลลัพธ์ทันที</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="calcResultBox"></div>
+            </div>
+
+            <!-- Pane 5: Complete Cisco IOS Command Cheat Sheet -->
+            <div id="acadTabPane-cheatsheet" class="hidden flex-1 overflow-y-auto p-5">
+                <div id="academyCheatSheetList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OSI 7-LAYER PDU INSPECTOR MODAL -->
+    <div id="pduInspectorModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-3xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden p-5 gap-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <div>
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                        <span> OSI 7-Layer Packet PDU Inspector</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Packet Tracer Mode</span>
+                    </h3>
+                    <p class="text-xs text-slate-400">แตะเลือก Hop ด้านล่างเพื่อดูการเปลี่ยนแปลงของ MAC Address, 802.1Q Tag, NAT IP และค่า TTL ในแต่ละอุปกรณ์</p>
+                </div>
+                <button onclick="ModalController.closePduInspectorModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <div id="pduHopStepper" class="flex items-center gap-2 overflow-x-auto pb-1"></div>
+            <div id="pduOsiLayersGrid" class="flex-1 overflow-y-auto space-y-3 pr-1"></div>
+        </div>
+    </div>
+
+    <!-- PKA AUTO-GRADER & LAB EDITOR MODAL -->
+    <div id="graderModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-2xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <div>
+                    <h3 class="font-bold text-base text-white"> ระบบตรวจคะแนนแล็บอัตโนมัติ & Lab Editor (PKA Grader)</h3>
+                    <p id="graderLabTitle" class="text-xs text-cyan-400 font-mono mt-0.5">Lab Assessment</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="graderScoreNumber" class="text-3xl font-mono font-bold text-emerald-400">100%</span>
+                    <button onclick="ModalController.closeGraderModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+                </div>
+            </div>
+            <div id="graderChecklist" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
+
+            <!-- Custom Lab Objective Builder -->
+            <div class="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-amber-300"> Lab Editor: สร้างโจทย์และเงื่อนไขตรวจคะแนนเอง (Custom Grader Rules)</span>
+                    <button onclick="ModalController.clearCustomGraderRules()" class="text-[11px] text-rose-400 hover:text-rose-300 font-semibold">ล้างเงื่อนไขที่สร้างเอง</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input id="customLabTitleInput" type="text" placeholder="ชื่อโจทย์แล็บ (เช่น Quiz 1: OSPF)" onchange="ModalController.saveCustomLabTitle(this.value)" class="sm:col-span-4 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-400">
+                    <select id="customRuleType" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-cyan-300">
+                        <option value="ping_pass">Ping สำเร็จ (ICMP)</option>
+                        <option value="http_pass">HTTP Port 80 สำเร็จ</option>
+                        <option value="ping_block">ACL บล็อก Ping</option>
+                        <option value="ospf_neighbor">มี OSPF Neighbor FULL</option>
+                        <option value="nat_active">เปิดใช้งาน NAT/PAT</option>
+                        <option value="trunk_active">ตั้งพอร์ต 802.1Q Trunk</option>
+                    </select>
+                    <select id="customRuleSrc" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"></select>
+                    <select id="customRuleDst" class="px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-mono text-white"></select>
+                    <button onclick="ModalController.addCustomGraderRule()" class="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs shadow">+ เพิ่มเงื่อนไข</button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-700">
+                <div class="flex gap-2">
+                    <button onclick="ModalController.copyGradeReport()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 text-xs font-bold shadow"> คัดลอกผลคะแนน</button>
+                    <button onclick="ModalController.closeGraderModal(); ModalController.openLabModal();" class="px-3.5 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold"> บันทึก/ส่งออกโจทย์ Lab</button>
+                </div>
+                <button onclick="ModalController.closeGraderModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAB PRESETS SELECTOR MODAL -->
+    <div id="presetModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-4xl w-full p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <div>
+                    <h3 class="font-bold text-base text-white">เลือกโจทย์แล็บมาตรฐาน Cisco NetAcad (12 Progressive Practical Labs)</h3>
+                    <p class="text-xs text-slate-400">เรียงตามลำดับความยากจากพื้นฐานสู่ระดับสูง พร้อมระบบตรวจให้คะแนน Auto-Grader และใบงาน 10 หัวข้อครบถ้วน</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="ModalController.closePresetModal(); AcademyTutor.openAcademyModal('labs');" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold"> เปิดใบงานแล็บ 10 หัวข้อ</button>
+                    <button onclick="ModalController.closePresetModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <button onclick="ModalController.selectPresetLab('lab1')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-cyan-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-cyan-400">LAB 01 • NET-DEV-INIT</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300">เริ่มต้น</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-cyan-300">Basic Switch Configuration</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่าสวิตช์ SW1-Access (Hostname, Secret, Management VLAN 1 SVI) และเรียนรู้ตาราง MAC Address</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab2')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-emerald-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-emerald-400">LAB 02 • CCNA-ITN</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300">พื้นฐาน</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-emerald-300">Basic Router Configuration</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่าเราเตอร์ R1-Core เชื่อมต่อ 2 วงแลน (.10.0/24 และ .20.0/24) พร้อมเปิดพอร์ตด้วย no shutdown</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab3')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-amber-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-amber-400">LAB 03 • CCNA-ITN M11</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300">Subnetting</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-amber-300">IPv4 Addressing & VLSM Subnetting</div>
+                    <p class="text-xs text-slate-400 mt-1">แบ่ง Subnet /26 (62 โฮสต์) สำหรับ Sales LAN (.0/26) และ Eng LAN (.64/26) แล้วกำหนด IP ให้ถูกต้อง</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab4')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-indigo-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-indigo-400">LAB 04 • CCNA-SRWE M15</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">ระดับกลาง</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-indigo-300">IPv4 Static & Default Routing</div>
+                    <p class="text-xs text-slate-400 mt-1">สำนักงานใหญ่ (R1-HQ) เชื่อมต่อสาขา (R2-Branch) ด้วยคำสั่ง ip route ทั้งขาไปและขากลับข้ามลิงก์ /30</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab5')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 hover:border-purple-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-purple-400">LAB 05 • CCNA-SRWE M3</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300">802.1Q Trunk</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-purple-300">VLAN Segmentation & 802.1Q Trunking</div>
+                    <p class="text-xs text-slate-400 mt-1">แยก Broadcast Domain ด้วย VLAN 10/20 ข้ามสวิตช์ 2 ตัว (SW1-Core ⟷ SW2-Access) ผ่านสาย 802.1Q Trunk</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab6')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-purple-500/40 hover:border-purple-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-purple-400">LAB 06 • CCNA-SRWE M4</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">ROAS</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-purple-300">Inter-VLAN Routing (Router-on-a-Stick)</div>
+                    <p class="text-xs text-slate-400 mt-1">ตั้งค่า 802.1Q Sub-interfaces (Gig0/0.10 & Gig0/0.20) บน R1-ROAS เพื่อให้ VLAN 10 กับ VLAN 20 คุยกันได้</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab7')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-teal-500/40 hover:border-teal-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-teal-400">LAB 07 • CCNA-SRWE M7</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300">DHCP DORA</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-teal-300">DHCPv4 Server & Client Lease</div>
+                    <p class="text-xs text-slate-400 mt-1">สร้าง DHCP Pool บน R1-DHCP ยกเว้น Excluded Address และสั่ง ipconfig /renew บนเครื่องลูกข่าย</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab8')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 hover:border-sky-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-sky-400">LAB 08 • CCNA-ENSA M1-2</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300">Dynamic OSPF</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-sky-300">Single-Area OSPFv2 Routing</div>
+                    <p class="text-xs text-slate-400 mt-1">แลกเปลี่ยนตาราง Routing อัตโนมัติด้วย OSPF Process 1 Area 0 พร้อมตรวจสอบ Neighbor สถานะ FULL</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab9')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-rose-500/40 hover:border-rose-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-rose-400">LAB 09 • CCNA-ENSA M4-5</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">ACL Security</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-rose-300">Standard & Extended IPv4 ACLs</div>
+                    <p class="text-xs text-slate-400 mt-1">คัดกรองแพ็กเก็ตด้วย ACL บล็อก Guest-PC แต่เปิดให้ Admin-PC เข้าถึง Finance-SRV ได้ตามกฎ Top-Down</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab10')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-orange-500/40 hover:border-orange-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-orange-400">LAB 10 • CCNA-ENSA M6</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300">NAT / PAT</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-orange-300">NAT/PAT Overload & Edge Firewall</div>
+                    <p class="text-xs text-slate-400 mt-1">แปลง Private IP (Inside Local) เป็น Public IP (Inside Global) ด้วย PAT Overload ออกสู่อินเทอร์เน็ต</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab11')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-amber-400">LAB 11 • CCNA-ENSA M12</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">ภารกิจซ่อมแล็บ</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-amber-300">Network Troubleshooting Challenge</div>
+                    <p class="text-xs text-slate-400 mt-1">ค้นหาและแก้ไขปัญหา 3 จุด (พอร์ต Shutdown, Default Gateway ผิด, IP คนละวง) เพื่อให้ได้ 100%</p>
+                </button>
+
+                <button onclick="ModalController.selectPresetLab('lab12')" class="text-left p-3.5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/50 hover:border-emerald-400 transition group">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-mono font-bold text-emerald-400">LAB 12 • CAPSTONE</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">Integrated Lab</span>
+                    </div>
+                    <div class="font-bold text-sm text-white group-hover:text-emerald-300">Integrated Enterprise Network</div>
+                    <p class="text-xs text-slate-400 mt-1">บูรณาการครบวงจร: VLAN, Port Security, OSPF, DHCP, Extended ACL และ PAT Overload ในเครือข่ายเดียว!</p>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAB SAVE / LOAD MODAL -->
+    <div id="labModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-cisco-panel border border-cisco-border rounded-3xl max-w-lg w-full p-5 shadow-2xl flex flex-col gap-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-700">
+                <h3 class="font-bold text-base text-white">บันทึกและส่งออกแล็บ (JSON / File)</h3>
+                <button onclick="ModalController.closeLabModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center font-bold">✕</button>
+            </div>
+            <div>
+                <p class="text-xs text-slate-300 mb-2">ดาวน์โหลดเป็นไฟล์ `.json` เก็บไว้ หรือคัดลอก/วางโค้ด JSON ด้านล่างเพื่อนำเข้าโครงข่าย:</p>
+                <textarea id="labJsonTextArea" rows="8" class="w-full p-3 rounded-2xl bg-slate-900 border border-slate-700 font-mono text-xs text-cyan-300 focus:outline-none focus:border-cyan-400 selectable-text"></textarea>
+                <input id="labJsonFileInput" type="file" accept=".json,application/json" class="hidden" onchange="ModalController.handleFileUpload(event)">
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-700">
+                <div class="flex gap-2">
+                    <button onclick="ModalController.copyLabJson()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"> คัดลอก</button>
+                    <button onclick="ModalController.downloadLabJsonFile()" class="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30 text-xs font-semibold"> ดาวน์โหลด .json</button>
+                    <button onclick="ModalController.triggerUploadJsonFile()" class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold"> อัปโหลดไฟล์</button>
+                </div>
+                <button onclick="ModalController.importLabJson()" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 active:scale-95 text-white text-xs font-bold shadow-lg">โหลดจากข้อความ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEGACY APPLICATION SCRIPTS -->
+    <script src="./js/network-engine.js"></script>
+    <script src="./js/cisco-cli.js"></script>
+    <script src="./js/academy-tutor.js"></script>
+    <script src="./js/modals.js"></script>
+    <script src="./js/canvas-ui.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+</html>

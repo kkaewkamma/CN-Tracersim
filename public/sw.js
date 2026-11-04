@@ -1,4 +1,4 @@
-const CACHE_NAME = 'netsim-touch-v5.1-core';
+const CACHE_NAME = 'cn-tracersim-v5.2-core';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -48,7 +48,11 @@ self.addEventListener('fetch', (e) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match('./index.html'));
+        .catch(() => {
+          if (e.request.destination === 'document') {
+            return caches.match('./index.html');
+          }
+        });
     })
   );
 });

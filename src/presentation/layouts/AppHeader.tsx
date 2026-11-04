@@ -131,6 +131,15 @@ export const AppHeader: React.FC = () => {
           <span className="hidden lg:inline">Subnet</span>
         </button>
 
+        {/* Legacy Mode Link */}
+        <a
+          href="./legacy/index.html"
+          className="px-2 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-mono border border-slate-800 transition hidden sm:inline"
+          title="สลับไปยังโหมด Legacy Canvas"
+        >
+          Legacy
+        </a>
+
         {/* NetAcad Academy Modal */}
         <button
           onClick={() => openModal('academy')}
