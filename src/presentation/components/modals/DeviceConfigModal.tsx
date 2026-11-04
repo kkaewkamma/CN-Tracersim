@@ -467,3 +467,4 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
     </div>
   );
 };
+

@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icons/*.svg'],
       manifest: {
-        name: 'CN-Tracersim - Cisco Packet Tracer & Network Simulator',
+        name: 'CN-Tracersim v5.2 - Cisco Packet Tracer & Network Simulator',
         short_name: 'CN-Tracersim',
         description: 'Interactive Cisco IOS CLI & Network Topology Simulator with NetAcad Learning Coach',
         theme_color: '#0b111a',

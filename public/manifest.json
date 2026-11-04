@@ -1,7 +1,7 @@
 {
-  "name": "NetSim Touch - iPad Packet Tracer",
-  "short_name": "NetSim",
-  "description": "Cisco IOS CLI & Network Topology Simulator for iPad and Web",
+  "name": "CN-Tracersim v5.2 - Cisco Packet Tracer & Network Simulator",
+  "short_name": "CN-Tracersim",
+  "description": "Cisco IOS CLI & Network Topology Simulator with NetAcad Learning Coach",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
