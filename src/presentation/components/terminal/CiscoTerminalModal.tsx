@@ -15,14 +15,23 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
   const { updateDevice } = useTopologyStore();
   const { activeLessonId } = useAcademyStore();
   const [cli] = useState(() => new CiscoCliStateMachine(device));
-  const [history, setHistory] = useState<string[]>([
-    `Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M\nTechnical Support: http://www.cisco.com/techsupport\n\nPress RETURN or type '?' for command help!\n`
-  ]);
+  
+  // Persistent terminal display history & command input history per device
+  const [history, setHistory] = useState<string[]>(() => {
+    if (device.cliHistory && Array.isArray(device.cliHistory) && device.cliHistory.length > 0) {
+      return device.cliHistory;
+    }
+    return [
+      `Cisco IOS Software, C2900 Software (C2900-UNIVERSALK9-M), Version 15.4(3)M\nTechnical Support: http://www.cisco.com/techsupport\n\nPress RETURN or type '?' for command help!\n`
+    ];
+  });
   const [inputVal, setInputVal] = useState('');
   const [prompt, setPrompt] = useState(() => cli.getPrompt());
 
-  // Command History Navigation State
-  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  // Persistent Command History (Arrow Up / Arrow Down) per device
+  const [cmdHistory, setCmdHistory] = useState<string[]>(() => {
+    return (device.cmdHistory && Array.isArray(device.cmdHistory)) ? device.cmdHistory : [];
+  });
   const [historyPointer, setHistoryPointer] = useState<number>(-1);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -45,30 +54,34 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
     const cmd = inputVal.trim();
     setInputVal('');
 
+    const nextCmdHistory = cmd ? [...cmdHistory, cmd] : cmdHistory;
     if (cmd) {
-      setCmdHistory(prev => [...prev, cmd]);
+      setCmdHistory(nextCmdHistory);
       setHistoryPointer(-1);
     }
 
     const currentPrompt = prompt;
     const res = cli.execute(cmd);
 
-    setHistory(prev => [
-      ...prev,
+    const nextHistory = [
+      ...history,
       `${currentPrompt} ${cmd}${res.output ? `\n${res.output}` : ''}`
-    ]);
-
+    ];
+    setHistory(nextHistory);
     setPrompt(res.prompt);
 
-    // Sync state changes directly back into Zustand Topology Store
-    if (res.stateChanged) {
-      updateDevice(device.id, (d) => ({
-        ...d,
-        ...cli.getDevice()
-      }));
-      if (onConfigChange) {
-        onConfigChange();
-      }
+    // Sync state changes, CLI history, and command history directly into Zustand Topology Store
+    updateDevice(device.id, (d) => ({
+      ...d,
+      ...cli.getDevice(),
+      cliHistory: nextHistory,
+      cmdHistory: nextCmdHistory,
+      cliMode: res.context.mode,
+      cliCurrentIf: res.context.currentInterface
+    }));
+
+    if (res.stateChanged && onConfigChange) {
+      onConfigChange();
     }
   };
 
@@ -137,7 +150,13 @@ export const CiscoTerminalModal: React.FC<TerminalModalProps> = ({ device, onClo
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => setHistory([])}
+              onClick={() => {
+                setHistory([]);
+                updateDevice(device.id, (d) => ({
+                  ...d,
+                  cliHistory: []
+                }));
+              }}
               className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition"
               title="Clear terminal screen"
             >

@@ -132,6 +132,10 @@ export interface BaseNetworkDevice {
   arpTable?: Record<string, string>;
   enableSecret?: string;
   passwordEncryption?: boolean;
+  cliHistory?: string[];
+  cmdHistory?: string[];
+  cliMode?: string;
+  cliCurrentIf?: string;
 }
 
 export interface RouterDevice extends BaseNetworkDevice {

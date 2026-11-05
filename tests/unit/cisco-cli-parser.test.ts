@@ -58,5 +58,25 @@ describe('Core CLI: CiscoCliStateMachine', () => {
     expect(ipRoute.output).toContain('C    192.168.10.0/24 is directly connected, Gig0/0');
     expect(ipRoute.output).toContain('S    192.168.20.0/24 [1/0] via 10.0.0.2');
   });
+
+  it('restores CLI mode and interface context from device properties', () => {
+    const sw: any = {
+      name: 'SW1',
+      type: 'switch',
+      cliMode: 'interface',
+      cliCurrentIf: 'FastEthernet0/1',
+      ports: {
+        'FastEthernet0/1': { up: true, vlan: 1, mode: 'access' }
+      }
+    };
+
+    const cli = new CiscoCliStateMachine(sw);
+    expect(cli.getPrompt()).toBe('SW1(config-if)#');
+    expect(cli.getContext().mode).toBe('interface');
+    expect(cli.getContext().currentInterface).toBe('FastEthernet0/1');
+
+    cli.execute('switchport access vlan 20');
+    expect(sw.ports['FastEthernet0/1'].vlan).toBe(20);
+  });
 });
 

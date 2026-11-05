@@ -12,8 +12,8 @@ export class CiscoCliStateMachine {
   constructor(device: any, initialContext?: Partial<CliContext>) {
     this.device = device;
     this.context = {
-      mode: initialContext?.mode || 'user',
-      currentInterface: initialContext?.currentInterface,
+      mode: initialContext?.mode || (device.cliMode as any) || 'user',
+      currentInterface: initialContext?.currentInterface || device.cliCurrentIf,
       currentLine: initialContext?.currentLine,
       currentOspfProcess: initialContext?.currentOspfProcess,
       currentDhcpPool: initialContext?.currentDhcpPool
