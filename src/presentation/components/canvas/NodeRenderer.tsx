@@ -125,7 +125,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
           useEventLogStore.getState().addLog({
             type: packetSource.protocol === 'tcp' ? 'SIM_HTTP' : 'SIM_ICMP',
             status: res.success ? 'ok' : 'fail',
-            title: `${packetSource.protocol.toUpperCase()}: ${srcDev.name} ➔ ${device.name}`,
+            title: `${packetSource.protocol.toUpperCase()}: ${srcDev.name} -> ${device.name}`,
             details: res.reason
           });
         }
@@ -195,8 +195,8 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
     >
       {/* NetAcad Active Step Target Beacon */}
       {isLabTarget && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-[9px] shadow-lg flex items-center gap-1 animate-bounce whitespace-nowrap z-20 pointer-events-none">
-          <Target size={11} className="text-slate-950" />
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-sans font-bold text-[11px] shadow-lg flex items-center gap-1 animate-bounce whitespace-nowrap z-20 pointer-events-none">
+          <Target size={12} className="text-slate-950" />
           <span>เป้าหมาย Lab</span>
         </div>
       )}
@@ -205,7 +205,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
         className={`w-16 h-16 rounded-2xl bg-slate-900/90 border-2 ${getBorderColor()} shadow-xl flex flex-col items-center justify-center gap-1 transition-all group-hover:scale-105 backdrop-blur`}
       >
         {getDeviceIcon(device.type)}
-        <span className="text-[10px] font-mono font-bold text-white tracking-tight px-1 truncate max-w-[56px]">
+        <span className="text-[11px] font-mono font-bold text-white tracking-tight px-1 truncate max-w-[60px]">
           {device.name}
         </span>
       </div>
@@ -213,7 +213,7 @@ export const NodeRenderer: React.FC<NodeRendererProps> = ({ device, zoom, onOpen
       {/* IP Badge Sub-label */}
       {primaryIp && (
         <div className="mt-1 text-center">
-          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-950/80 text-cyan-300 border border-slate-800">
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950/90 text-cyan-300 border border-slate-800">
             {primaryIp}
           </span>
         </div>

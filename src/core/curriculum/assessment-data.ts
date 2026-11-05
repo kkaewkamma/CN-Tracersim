@@ -53,7 +53,7 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             correctIndex: 0,
             diagnosticWhyWrong: 'คำว่า "administratively down" บน Cisco IOS หมายความว่าพอร์ตถูกสั่งปิด (shutdown) ในระดับซอฟต์แวร์ ไม่ใช่ปัญหาสายหลุด (ซึ่งจะขึ้นว่า down/down เฉยๆ)',
             conceptSummary: 'พอร์ตของ Cisco Router ทุกพอร์ตจะเริ่มต้นในสถานะ shutdown เสมอ แอดมินต้องกำหนด IP Address และสั่ง no shutdown เพื่อเปิดใช้งาน',
-            cliRef: 'interface Gig0/1 ➔ no shutdown'
+            cliRef: 'interface Gig0/1 -> no shutdown'
         },
         {
             id: 'q4',
@@ -61,7 +61,7 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             question: 'ข้อใดคือชุดคำสั่งที่ถูกต้องในการตั้งค่าให้สวิตช์ Layer 2 สามารถรับการรีโมตผ่านเครือข่ายและปลอดภัยที่สุดตามหลัก Device Hardening?',
             options: [
                 'ตั้ง enable secret, กำหนด IP บน interface vlan 1 (no shut), ตั้ง ip default-gateway และบังคับ transport input ssh บน line vty 0 4',
-                'กำหนด IP Address ลงบนพอร์ต физикал interface Fa0/1 โดยตรง และเปิด transport input telnet',
+                'กำหนด IP Address ลงบนพอร์ตกายภาพ (Physical Interface) Fa0/1 โดยตรง และเปิด transport input telnet',
                 'ตั้ง enable password แบบไม่เข้ารหัส และไม่ต้องกำหนด ip default-gateway',
                 'ใช้คำสั่ง ip routing บนสวิตช์ Layer 2 โดยไม่ต้องสร้าง VLAN 1'
             ],
@@ -83,7 +83,7 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             correctIndex: 0,
             diagnosticWhyWrong: 'บน Cisco IOS Router พอร์ตย่อย (Sub-interface) จะไม่ยอมรับคำสั่ง ip address จนกว่าจะระบุโปรโตคอลการติดป้ายแท็กด้วยคำสั่ง encapsulation dot1Q <vlan-id> เสียก่อน',
             conceptSummary: 'ในสถาปัตยกรรม ROAS พอร์ตฝั่ง Switch ต้องตั้งเป็น switchport mode trunk ส่วนฝั่ง Router ต้องสร้าง Sub-interface (เช่น Gig0/0.10), สั่ง encapsulation dot1Q 10, ใส่ ip address และสั่ง no shutdown ที่พอร์ตแม่ Gig0/0',
-            cliRef: 'interface Gig0/0.10 ➔ encapsulation dot1Q 10 ➔ ip address ...'
+            cliRef: 'interface Gig0/0.10 -> encapsulation dot1Q 10 -> ip address ...'
         },
         {
             id: 'q6',
@@ -112,7 +112,7 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             ],
             correctIndex: 0,
             diagnosticWhyWrong: 'คำสั่ง ip dhcp excluded-address <low-ip> [high-ip] ต้องพิมพ์ในโหมด Global Configuration (config)# ไม่ใช่ในโหมดย่อยของ Pool และต้องระบุเพื่อป้องกันปัญหา IP Address Conflict',
-            conceptSummary: 'กระบวนการ DHCP DORA (Discover ➔ Offer ➔ Request ➔ Ack) จะเลือกแจก IP จากช่วง network ใน Pool ที่ไม่ได้อยู่ในรายการ ip dhcp excluded-address',
+            conceptSummary: 'กระบวนการ DHCP DORA (Discover -> Offer -> Request -> Ack) จะเลือกแจก IP จากช่วง network ใน Pool ที่ไม่ได้อยู่ในรายการ ip dhcp excluded-address',
             cliRef: 'ip dhcp excluded-address 192.168.10.1 192.168.10.9'
         },
         {
@@ -128,7 +128,7 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             correctIndex: 0,
             diagnosticWhyWrong: 'หมายเลข Process ID ของ OSPF (เช่น router ospf 1 กับ router ospf 10) มีความสำคัญเฉพาะภายในตัวเครื่อง (Locally Significant) จึงต่างกันได้ แต่หมายเลข Area ID, Subnet และ Hello/Dead Timers บนลิงก์เดียวกันต้องตรงกัน 100% จึงจะจับคู่ Neighbor ได้',
             conceptSummary: 'เงื่อนไขการสร้าง OSPF Neighbor Adjacency: (1) อยู่บน Subnet เดียวกัน, (2) อยู่ใน Area ID เดียวกัน, (3) Hello/Dead Timers ตรงกัน และ (4) พอร์ตไม่เป็น Passive Interface',
-            cliRef: 'router ospf 1 ➔ network 10.0.0.0 0.0.0.3 area 0'
+            cliRef: 'router ospf 1 -> network 10.0.0.0 0.0.0.3 area 0'
         },
         {
             id: 'q9',
@@ -158,6 +158,6 @@ export const CCNA_ASSESSMENT_QUESTIONS: AssessmentQuestion[] = [
             correctIndex: 0,
             diagnosticWhyWrong: 'ในโหมด Violation Shutdown (ค่าเริ่มต้น) เมื่อตรวจพบ Source MAC Address เกินจำนวนหรือไม่อยู่ในรายการที่อนุญาต สวิตช์จะสั่งปิดพอร์ตเป็นสถานะ err-disabled ทันที การสั่ง no shutdown อย่างเดียวจะไม่พอ ต้องสั่ง shutdown ก่อนแล้วจึงสั่ง no shutdown',
             conceptSummary: 'โหมดของ Port Security มี 3 รูปแบบ: Protect (ทิ้งเฟรมเงียบๆ), Restrict (ทิ้งเฟรม + นับสถิติ Violation + แจ้ง Syslog) และ Shutdown (ตัดพอร์ตเป็น err-disabled)',
-            cliRef: 'show port-security interface Fa0/1 / shutdown ➔ no shutdown'
+            cliRef: 'show port-security interface Fa0/1 / shutdown -> no shutdown'
         }
     ];

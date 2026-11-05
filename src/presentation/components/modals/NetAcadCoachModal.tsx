@@ -6,12 +6,71 @@ import { useTopologyStore } from '@application/stores/useTopologyStore';
 import { 
   BookOpen, Award, CheckCircle2, ChevronRight, X, Play, 
   ShieldCheck, Zap, FileText, Terminal, GraduationCap, 
-  AlertCircle, RotateCcw
+  AlertCircle, RotateCcw, ListChecks, HelpCircle, Layers
 } from 'lucide-react';
 
 interface AcademyModalProps {
   onClose: () => void;
 }
+
+/**
+ * Renders structured multi-line theory text cleanly without raw HTML tags.
+ * Automatically highlights key terms before colons (e.g. "• Inside Local: ...").
+ */
+const StructuredTheoryBlock: React.FC<{ text: string }> = ({ text }) => {
+  const cleanText = text
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?b>/gi, '')
+    .replace(/<\/?code>/gi, '');
+
+  const lines = cleanText
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  return (
+    <div className="space-y-2 text-xs sm:text-sm text-slate-200 leading-relaxed font-sans">
+      {lines.map((line, idx) => {
+        const isSubItem = line.startsWith('-');
+        const isMainBullet = line.startsWith('•') || /^\d+\./.test(line);
+        const colonIdx = line.indexOf(':');
+
+        // Header line (first line ending with colon)
+        if (idx === 0 && line.endsWith(':')) {
+          return (
+            <div key={idx} className="font-bold text-white text-sm pb-1 border-b border-slate-800/80">
+              {line}
+            </div>
+          );
+        }
+
+        // Line with "Key: Description"
+        if (colonIdx > 0 && colonIdx < 60) {
+          const prefix = line.slice(0, colonIdx + 1);
+          const rest = line.slice(colonIdx + 1);
+          return (
+            <div
+              key={idx}
+              className={`${isSubItem ? 'pl-5 text-slate-300' : isMainBullet ? 'pl-1' : ''}`}
+            >
+              <span className="font-bold text-cyan-300">{prefix}</span>
+              <span className="text-slate-200">{rest}</span>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={idx}
+            className={`${isSubItem ? 'pl-5 text-slate-300' : isMainBullet ? 'pl-1' : ''}`}
+          >
+            {line}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'lessons' | 'labs' | 'assessment'>('lessons');
@@ -56,7 +115,7 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 font-sans">
       <div className="bg-[#0b1017] border border-cisco-border rounded-3xl max-w-5xl w-full h-[88vh] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
@@ -68,7 +127,7 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-white">Cisco Networking Academy (NetAcad) Learning Coach</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold">
                   CCNA Track
                 </span>
               </div>
@@ -87,37 +146,37 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
         <div className="px-5 py-2.5 bg-slate-950/60 border-b border-slate-800 flex items-center gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('lessons')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shrink-0 transition ${
               activeTab === 'lessons'
                 ? 'bg-cyan-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
             }`}
           >
-            <BookOpen size={14} />
+            <BookOpen size={15} />
             <span>1. ทฤษฎีและคำสั่ง Cisco IOS ({NETACAD_LESSONS.length} บท)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('labs')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shrink-0 transition ${
               activeTab === 'labs'
                 ? 'bg-emerald-500 text-slate-950 shadow-md'
-                : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
             }`}
           >
-            <Zap size={14} />
-            <span>2. โจทย์แล็บปฏิบัติการ (12 Progressive Labs)</span>
+            <Zap size={15} />
+            <span>2. โจทย์แล็บปฏิบัติการ ({PRACTICAL_LABS_CATALOG.length} Labs)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('assessment')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition ${
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shrink-0 transition ${
               activeTab === 'assessment'
                 ? 'bg-purple-500 text-white shadow-md'
-                : 'text-slate-400 hover:text-white bg-slate-900 border border-slate-800'
+                : 'text-slate-300 hover:text-white bg-slate-900 border border-slate-800'
             }`}
           >
-            <GraduationCap size={15} />
+            <GraduationCap size={16} />
             <span>3. แบบทดสอบวัดผล Pre/Post-Test ({CCNA_ASSESSMENT_QUESTIONS.length} ข้อ)</span>
           </button>
         </div>
@@ -141,13 +200,13 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                       }`}
                     >
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[10px] font-mono font-bold text-cyan-400">{l.number}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">{l.badge}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-cyan-400">{l.number}</span>
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">{l.badge}</span>
                         </div>
-                        <div className="font-bold text-xs truncate">{l.title}</div>
+                        <div className="font-bold text-xs sm:text-sm truncate">{l.title}</div>
                       </div>
-                      <ChevronRight size={14} className={isSelected ? 'text-cyan-400' : 'text-slate-600'} />
+                      <ChevronRight size={15} className={isSelected ? 'text-cyan-400 shrink-0' : 'text-slate-600 shrink-0'} />
                     </button>
                   );
                 })}
@@ -155,51 +214,75 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
               {/* Right Lesson Detail */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#080d14]">
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 mb-1">
-                    <span>{selectedLesson.number}</span>
-                    <span>•</span>
-                    <span>{selectedLesson.netacadRef}</span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-cyan-400 mb-1">
+                      <span>{selectedLesson.number}</span>
+                      <span>•</span>
+                      <span>{selectedLesson.netacadRef || selectedLesson.topicEn}</span>
+                      {selectedLesson.badge && (
+                        <>
+                          <span>•</span>
+                          <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                            {selectedLesson.badge}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-bold text-white">{selectedLesson.title}</h2>
                   </div>
-                  <h2 className="text-lg font-bold text-white">{selectedLesson.title}</h2>
+
+                  {selectedLesson.presetLab && (
+                    <button
+                      onClick={() => {
+                        loadPreset(selectedLesson.presetLab!);
+                        onClose();
+                      }}
+                      className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition"
+                    >
+                      <Play size={13} />
+                      <span>เปิดผังแล็บประกอบบทเรียน</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-                  <h4 className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-                    <FileText size={14} className="text-cyan-400" />
+                {/* Theory Summary */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5">
+                  <h4 className="text-xs sm:text-sm font-bold text-cyan-300 flex items-center gap-1.5">
+                    <FileText size={15} className="text-cyan-400" />
                     <span>สรุปหลักการทำงาน (Theory Summary)</span>
                   </h4>
-                  <p className="text-xs text-slate-300 leading-relaxed">{selectedLesson.theorySummary}</p>
+                  <StructuredTheoryBlock text={selectedLesson.theorySummary} />
                 </div>
 
                 {/* Scope */}
                 {selectedLesson.simScope && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm">
+                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
                       <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                        <ShieldCheck size={14} />
+                        <ShieldCheck size={15} />
                         <span>Authentic Simulation (ตรงตามจริง)</span>
                       </div>
-                      <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.authentic}</p>
+                      <p className="text-slate-300 text-xs leading-relaxed">{selectedLesson.simScope.authentic}</p>
                     </div>
 
-                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
                       <div className="font-bold text-sky-400 flex items-center gap-1.5">
-                        <Zap size={14} />
+                        <Zap size={15} />
                         <span>Simplified Scope (เพื่อการเรียนรู้)</span>
                       </div>
-                      <p className="text-slate-400 text-[11px] leading-relaxed">{selectedLesson.simScope.simplified}</p>
+                      <p className="text-slate-300 text-xs leading-relaxed">{selectedLesson.simScope.simplified}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Exam Tips */}
-                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
-                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                    <Award size={14} className="text-amber-400" />
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                  <div className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                    <Award size={15} className="text-amber-400" />
                     <span>จุดเน้นสำหรับสอบ (Exam Highlights):</span>
                   </div>
-                  <ul className="list-disc list-inside text-xs text-slate-200 space-y-1">
+                  <ul className="list-disc list-inside text-xs sm:text-sm text-slate-200 space-y-1.5 leading-relaxed">
                     {selectedLesson.examTips.map((tip, idx) => (
                       <li key={idx}>{tip}</li>
                     ))}
@@ -208,19 +291,48 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
                 {/* Cheat Sheet */}
                 <div className="space-y-2">
-                  <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Terminal size={14} className="text-cyan-400" />
+                  <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
+                    <Terminal size={15} className="text-cyan-400" />
                     <span>สรุปคำสั่ง Cisco IOS ที่เกี่ยวข้อง:</span>
                   </div>
-                  <div className="space-y-1.5 font-mono text-xs">
+                  <div className="space-y-2">
                     {selectedLesson.cheatSheet.map((item, idx) => (
-                      <div key={idx} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                        <span className="text-amber-300 font-bold">{item.cmd}</span>
-                        <span className="text-[11px] text-slate-400 font-sans">{item.desc}</span>
+                      <div key={idx} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <code className="text-amber-300 font-mono font-bold text-xs sm:text-sm">{item.cmd}</code>
+                        <span className="text-xs text-slate-300 font-sans">{item.desc}</span>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* Guided Step-by-Step CLI Practice */}
+                {selectedLesson.steps && selectedLesson.steps.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2.5">
+                    <div className="text-xs sm:text-sm font-bold text-emerald-300 flex items-center gap-1.5">
+                      <ListChecks size={15} className="text-emerald-400" />
+                      <span>ขั้นตอนฝึกปฏิบัติทีละขั้น (Step-by-Step Guided CLI):</span>
+                    </div>
+                    <div className="space-y-2">
+                      {selectedLesson.steps.map((st, idx) => (
+                        <div key={idx} className="p-3 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-cyan-300">
+                              ขั้นที่ {idx + 1}: {st.device ? `อุปกรณ์ ${st.device}` : st.title || ''}
+                            </span>
+                            {st.cmd && (
+                              <code className="px-2.5 py-0.5 rounded-lg bg-black border border-slate-800 text-amber-300 font-mono text-xs font-bold">
+                                {st.cmd}
+                              </code>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            {st.explain || st.desc}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -242,77 +354,122 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                       }`}
                     >
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[10px] font-mono font-bold text-emerald-400">{l.number}</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">{l.difficulty}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-mono font-bold text-emerald-400">{l.number}</span>
+                          <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">{l.difficulty}</span>
                         </div>
-                        <div className="font-bold text-xs truncate">{l.title}</div>
+                        <div className="font-bold text-xs sm:text-sm truncate">{l.title}</div>
                       </div>
-                      <ChevronRight size={14} className={isSelected ? 'text-emerald-400' : 'text-slate-600'} />
+                      <ChevronRight size={15} className={isSelected ? 'text-emerald-400 shrink-0' : 'text-slate-600 shrink-0'} />
                     </button>
                   );
                 })}
               </div>
 
-              {/* Lab 10-Part Guide Sheet */}
+              {/* Lab Guide Sheet */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#080d14]">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 mb-1">
-                      <span>{selectedLab.number}</span>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400 mb-1">
+                      <span className="font-mono font-bold">{selectedLab.number}</span>
                       <span>•</span>
                       <span>{selectedLab.netacadRef}</span>
+                      <span>•</span>
+                      <span className="text-slate-400">{selectedLab.difficulty}</span>
                     </div>
-                    <h2 className="text-lg font-bold text-white">{selectedLab.title}</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-white">{selectedLab.title}</h2>
                   </div>
                   <button 
                     onClick={() => {
                       loadPreset(selectedLab.id);
                       onClose();
                     }}
-                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow transition active:scale-95"
+                    className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow transition active:scale-95"
                   >
-                    <Play size={14} />
+                    <Play size={15} />
                     <span>เริ่มทำแล็บนี้</span>
                   </button>
                 </div>
 
-                {/* 10 Sections */}
-                <div className="space-y-3 text-xs">
-                  <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-                    <div className="font-bold text-cyan-300">1. วัตถุประสงค์ (Learning Objectives):</div>
-                    <ul className="list-disc list-inside text-slate-300 space-y-1">
+                {/* Full Lab Guide Sections */}
+                <div className="space-y-3 text-xs sm:text-sm">
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-cyan-300 flex items-center gap-1.5">
+                      <BookOpen size={15} />
+                      <span>1. วัตถุประสงค์การเรียนรู้ (Learning Objectives):</span>
+                    </div>
+                    <ul className="list-disc list-inside text-slate-200 space-y-1 leading-relaxed">
                       {selectedLab.objectives.map((o, idx) => (
                         <li key={idx}>{o}</li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1">
-                    <div className="font-bold text-emerald-300">2. สถานการณ์โจทย์ (Scenario):</div>
-                    <p className="text-slate-300 leading-relaxed">{selectedLab.scenario}</p>
+                  {selectedLab.topologyDesc && (
+                    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                      <div className="font-bold text-sky-300 flex items-center gap-1.5">
+                        <Layers size={15} />
+                        <span>2. โครงสร้างผังเครือข่ายและอุปกรณ์ (Topology & Devices):</span>
+                      </div>
+                      <p className="text-slate-200 leading-relaxed">{selectedLab.topologyDesc}</p>
+                      {selectedLab.devices && selectedLab.devices.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {selectedLab.devices.map((dev, idx) => (
+                            <span key={idx} className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300">
+                              {dev}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-emerald-300">3. สถานการณ์โจทย์ (Scenario):</div>
+                    <p className="text-slate-200 leading-relaxed">{selectedLab.scenario}</p>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-                    <div className="font-bold text-amber-300">3. คำสั่ง Cisco IOS ที่ต้องใช้:</div>
-                    <div className="p-2 rounded-xl bg-black font-mono text-[11px] text-amber-300 space-y-1 select-all">
+                  {selectedLab.procedure && selectedLab.procedure.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                      <div className="font-bold text-teal-300">4. ขั้นตอนการปฏิบัติการ (Step-by-Step Procedure):</div>
+                      <ol className="list-decimal list-inside text-slate-200 space-y-1.5 leading-relaxed">
+                        {selectedLab.procedure.map((step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+                    <div className="font-bold text-amber-300">5. คำสั่ง Cisco IOS ที่ต้องใช้ (Required Commands):</div>
+                    <div className="p-3 rounded-xl bg-black border border-slate-800 font-mono text-xs text-amber-300 space-y-1.5 select-all">
                       {selectedLab.commands.map((cmd, idx) => (
                         <div key={idx}>{cmd}</div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
-                    <div className="font-bold text-purple-300">4. เกณฑ์การตรวจ Auto-Grader (100%):</div>
-                    <ul className="space-y-1 text-slate-300">
+                  <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-purple-300">6. เกณฑ์การตรวจ Auto-Grader (100%):</div>
+                    <ul className="space-y-1.5 text-slate-200">
                       {selectedLab.graderCriteria.map((c, idx) => (
-                        <li key={idx} className="flex items-center gap-1.5">
-                          <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
+                        <li key={idx} className="flex items-start gap-2">
+                          <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
                           <span>{c}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
+
+                  {selectedLab.hintsAndSolution && (
+                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                      <div className="font-bold text-amber-300 flex items-center gap-1.5">
+                        <HelpCircle size={15} />
+                        <span>คำใบ้และแนวทางแก้ไข (Hints & Solution):</span>
+                      </div>
+                      <p className="text-slate-200 text-xs sm:text-sm leading-relaxed">{selectedLab.hintsAndSolution}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -328,7 +485,7 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                     <span className="text-xs font-bold text-purple-300 uppercase tracking-wider font-mono">
                       CCNA Knowledge Assessment
                     </span>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                       {CCNA_ASSESSMENT_QUESTIONS.length} Questions
                     </span>
                   </div>
@@ -377,14 +534,14 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
               {isSubmitted && (
                 <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/40 flex items-center justify-between animate-in zoom-in-95">
                   <div className="space-y-0.5">
-                    <span className="text-[10px] font-mono text-purple-300 font-bold uppercase tracking-wider">
+                    <span className="text-xs font-mono text-purple-300 font-bold uppercase tracking-wider">
                       {testMode === 'pre' ? 'Pre-Test Diagnostic Score' : 'Post-Test Mastery Score'}
                     </span>
                     <div className="text-2xl font-black font-mono text-white">
                       {testMode === 'pre' ? preTestScore : postTestScore}%
                     </div>
                   </div>
-                  <div className="text-xs text-slate-300 font-medium">
+                  <div className="text-xs sm:text-sm text-slate-200 font-medium">
                     ตอบถูก {Object.entries(userAnswers).filter(([qid, ans]) => CCNA_ASSESSMENT_QUESTIONS.find(q => q.id === qid)?.correctIndex === ans).length} จาก {CCNA_ASSESSMENT_QUESTIONS.length} ข้อ
                   </div>
                 </div>
@@ -410,23 +567,23 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="space-y-1">
-                          <span className="text-[10px] font-mono text-cyan-400 font-bold">
+                          <span className="text-xs text-cyan-400 font-bold">
                             ข้อที่ {qIdx + 1} • {q.track}
                           </span>
-                          <h4 className="text-sm font-semibold text-white leading-relaxed">
+                          <h4 className="text-sm sm:text-base font-semibold text-white leading-relaxed">
                             {q.question}
                           </h4>
                         </div>
                         {isSubmitted && (
                           <div className="shrink-0">
                             {isCorrect ? (
-                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1">
-                                <CheckCircle2 size={12} />
+                              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center gap-1">
+                                <CheckCircle2 size={13} />
                                 <span>ถูกต้อง</span>
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold flex items-center gap-1">
-                                <AlertCircle size={12} />
+                              <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300 text-xs font-bold flex items-center gap-1">
+                                <AlertCircle size={13} />
                                 <span>ไม่ถูกต้อง</span>
                               </span>
                             )}
@@ -435,7 +592,7 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                       </div>
 
                       {/* Options */}
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {q.options.map((opt, optIdx) => {
                           const isOptionSelected = selectedOpt === optIdx;
                           const isAnswerKey = isSubmitted && optIdx === q.correctIndex;
@@ -445,24 +602,24 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
                               key={optIdx}
                               disabled={isSubmitted}
                               onClick={() => handleSelectAnswer(q.id, optIdx)}
-                              className={`w-full text-left p-2.5 rounded-xl text-xs font-mono border transition flex items-center justify-between ${
+                              className={`w-full text-left p-3 rounded-xl text-xs sm:text-sm font-sans border transition flex items-center justify-between gap-2 ${
                                 isAnswerKey
                                   ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-200 font-bold'
                                   : isOptionSelected && isWrong
                                   ? 'bg-rose-500/20 border-rose-500/60 text-rose-200'
                                   : isOptionSelected
                                   ? 'bg-purple-500/20 border-purple-500 text-white font-semibold'
-                                  : 'bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-700'
+                                  : 'bg-slate-950/70 border-slate-800/80 text-slate-200 hover:border-slate-700'
                               }`}
                             >
-                              <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-lg bg-slate-800 flex items-center justify-center text-[10px] text-slate-400 font-bold">
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-mono text-slate-300 font-bold shrink-0">
                                   {String.fromCharCode(65 + optIdx)}
                                 </span>
-                                <span>{opt}</span>
+                                <span className="leading-relaxed">{opt}</span>
                               </div>
                               {isAnswerKey && (
-                                <span className="text-[10px] text-emerald-400 font-bold">คำตอบที่ถูกต้อง</span>
+                                <span className="text-xs text-emerald-400 font-bold shrink-0">คำตอบที่ถูกต้อง</span>
                               )}
                             </button>
                           );
@@ -471,16 +628,17 @@ export const NetAcadCoachModal: React.FC<AcademyModalProps> = ({ onClose }) => {
 
                       {/* Diagnostic Review if submitted */}
                       {isSubmitted && (
-                        <div className="p-3 rounded-xl bg-black/60 border border-slate-800 space-y-1 text-xs">
+                        <div className="p-3.5 rounded-xl bg-black/60 border border-slate-800 space-y-1.5 text-xs sm:text-sm font-sans">
                           <div className="text-cyan-300 font-bold">คำอธิบายเชิงลึก (Concept Review):</div>
-                          <p className="text-slate-300 leading-relaxed text-[11px]">{q.conceptSummary}</p>
+                          <p className="text-slate-200 leading-relaxed">{q.conceptSummary}</p>
                           {q.diagnosticWhyWrong && !isCorrect && (
-                            <p className="text-amber-300/90 text-[11px] leading-relaxed pt-1">
-                              <b>วิเคราะห์จุดผิด:</b> {q.diagnosticWhyWrong}
+                            <p className="text-amber-300 leading-relaxed pt-1">
+                              <strong className="font-bold">วิเคราะห์จุดผิด:</strong> {q.diagnosticWhyWrong}
                             </p>
                           )}
-                          <div className="pt-1 text-[11px] font-mono text-emerald-400">
-                            <b>คำสั่งอ้างอิง:</b> {q.cliRef}
+                          <div className="pt-1 text-xs font-mono text-emerald-400">
+                            <strong className="font-sans text-slate-300">คำสั่งอ้างอิง: </strong>
+                            {q.cliRef}
                           </div>
                         </div>
                       )}

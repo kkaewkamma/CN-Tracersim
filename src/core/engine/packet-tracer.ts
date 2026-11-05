@@ -89,7 +89,7 @@ export class PacketTracer {
       egressPort: srcPortName,
       action: 'forward',
       layer: 'L3',
-      details: `สร้างแพ็กเก็ต ${protocol.toUpperCase()}: ${srcIp} ➔ ${dstIp}`
+      details: `สร้างแพ็กเก็ต ${protocol.toUpperCase()}: ${srcIp} -> ${dstIp}`
     });
 
     // Check direct subnet match
@@ -195,7 +195,7 @@ export class PacketTracer {
             });
             return {
               success: false,
-              reason: `VLAN Isolation: ไม่สามารถสื่อสารข้าม VLAN ${srcVlan} ➔ VLAN ${dstVlan} โดยไม่มีเราเตอร์`,
+              reason: `VLAN Isolation: ไม่สามารถสื่อสารข้าม VLAN ${srcVlan} -> VLAN ${dstVlan} โดยไม่มีเราเตอร์`,
               dropStage: 'l2_vlan',
               hops
             };
@@ -262,7 +262,7 @@ export class PacketTracer {
               device: dstSwitch.name,
               action: 'drop',
               layer: 'L2',
-              details: `VLAN Isolation: ข้าม VLAN ${srcVlan} ➔ VLAN ${dstVlan} ไม่สำเร็จ`
+              details: `VLAN Isolation: ข้าม VLAN ${srcVlan} -> VLAN ${dstVlan} ไม่สำเร็จ`
             });
             return {
               success: false,
@@ -513,7 +513,7 @@ export class PacketTracer {
             egressPort: egressPortName,
             action: 'nat',
             layer: 'L3',
-            details: `PAT Overload: แปลง Private IP ${srcIp} ➔ Inside Global ${currentSrcIp}:${trans.translatedPort}`
+            details: `PAT Overload: แปลง Private IP ${srcIp} -> Inside Global ${currentSrcIp}:${trans.translatedPort}`
           });
         }
       }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cn-tracersim-v5.2.2-clean';
+const CACHE_NAME = 'cn-tracersim-v5.2.3-typography';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

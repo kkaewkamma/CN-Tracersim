@@ -55,7 +55,7 @@ export class LabGraderService {
         if (rule.type === 'ping_pass') {
           const sim = runSim(rule.src, rule.dst || '', 'icmp');
           checks.push({
-            label: `Ping (ICMP) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
+            label: `Ping (ICMP) จาก ${rule.src} -> ${rule.dst} สำเร็จ`,
             passed: sim.success,
             reason: sim.reason,
             isCustom: true
@@ -63,7 +63,7 @@ export class LabGraderService {
         } else if (rule.type === 'http_pass') {
           const sim = runSim(rule.src, rule.dst || '', 'tcp', 80);
           checks.push({
-            label: `เปิดเว็บ HTTP (Port 80) จาก ${rule.src} ➔ ${rule.dst} สำเร็จ`,
+            label: `เปิดเว็บ HTTP (Port 80) จาก ${rule.src} -> ${rule.dst} สำเร็จ`,
             passed: sim.success,
             reason: sim.reason,
             isCustom: true
@@ -72,7 +72,7 @@ export class LabGraderService {
           const sim = runSim(rule.src, rule.dst || '', 'icmp');
           const blocked = !sim.success && !!sim.aclBlocked;
           checks.push({
-            label: `Firewall ACL บล็อก Ping จาก ${rule.src} ➔ ${rule.dst}`,
+            label: `Firewall ACL บล็อก Ping จาก ${rule.src} -> ${rule.dst}`,
             passed: blocked,
             reason: blocked ? sim.reason : 'Packet ยังไม่ถูกบล็อกด้วยกฎ ACL',
             isCustom: true
@@ -107,7 +107,7 @@ export class LabGraderService {
           reason: portsUp ? 'พอร์ต Fa0/1 และ Fa0/2 สถานะ UP' : 'พอร์ตบน Switch ยังปิดอยู่'
         },
         {
-          label: 'ทดสอบส่ง Ping ในวงแลนเดียวกันจาก PC1 ➔ File-SRV สำเร็จ',
+          label: 'ทดสอบส่ง Ping ในวงแลนเดียวกันจาก PC1 -> File-SRV สำเร็จ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -133,7 +133,7 @@ export class LabGraderService {
           reason: gwOk ? 'Default Gateway ทั้งสองฝั่งถูกต้อง' : 'ตรวจสอบค่า Default Gateway ของ PC1 และ Web-SRV'
         },
         {
-          label: 'ส่ง Ping ข้ามวงแลนจาก PC1 ➔ Web-SRV สำเร็จ',
+          label: 'ส่ง Ping ข้ามวงแลนจาก PC1 -> Web-SRV สำเร็จ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -159,7 +159,7 @@ export class LabGraderService {
           reason: ipsOk ? 'จัดสรรช่วง IP ตามการคำนวณ VLSM ถูกต้อง' : 'ตรวจสอบ IP ของทั้งสองโฮสต์ให้อยู่ใน Subnet /26'
         },
         {
-          label: 'ส่ง Ping ข้าม VLSM Subnet ระหว่าง Sales-PC ⟷ IT-SRV สำเร็จ',
+          label: 'ส่ง Ping ข้าม VLSM Subnet ระหว่าง Sales-PC <-> IT-SRV สำเร็จ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -184,7 +184,7 @@ export class LabGraderService {
           reason: r2Route ? 'พบ Static Route ขากลับบน R2-Branch แล้ว' : 'ใช้คำสั่ง ip route 192.168.10.0 255.255.255.0 10.0.0.1 บน R2-Branch'
         },
         {
-          label: 'ส่ง Ping ข้ามเราเตอร์จาก HQ-PC ➔ Branch-SRV สำเร็จทั้งขาไปและขากลับ',
+          label: 'ส่ง Ping ข้ามเราเตอร์จาก HQ-PC -> Branch-SRV สำเร็จทั้งขาไปและขากลับ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -207,7 +207,7 @@ export class LabGraderService {
           reason: trunkOk ? 'พอร์ต Fa0/1 ทั้งสองฝั่งเป็น 802.1Q Trunk' : 'ใช้คำสั่ง switchport mode trunk บน Fa0/1'
         },
         {
-          label: 'ส่ง Ping ข้าม Switch ใน VLAN 10 เดียวกัน (HR-PC1 ➔ HR-PC2) สำเร็จ',
+          label: 'ส่ง Ping ข้าม Switch ใน VLAN 10 เดียวกัน (HR-PC1 -> HR-PC2) สำเร็จ',
           passed: sameVlanSim.success,
           reason: sameVlanSim.reason
         },
@@ -237,7 +237,7 @@ export class LabGraderService {
           reason: subIfOk ? 'Sub-interfaces .10 และ .20 พร้อมใช้งาน' : 'สร้าง Sub-interface พร้อม encapsulation dot1Q'
         },
         {
-          label: 'Ping ข้าม VLAN ระหว่าง HR-PC (VLAN10) ⟷ DB-SRV (VLAN20) สำเร็จ',
+          label: 'Ping ข้าม VLAN ระหว่าง HR-PC (VLAN10) <-> DB-SRV (VLAN20) สำเร็จ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -289,7 +289,7 @@ export class LabGraderService {
           reason: adjOk ? 'Neighbor Adjacency FULL บน Area 0' : 'Area ID ไม่ตรงกันหรือยังไม่ได้ประกาศเครือข่ายเชื่อมต่อ'
         },
         {
-          label: 'Ping ข้ามเราเตอร์ OSPF จาก Edge-PC ➔ Cloud-SRV สำเร็จ',
+          label: 'Ping ข้ามเราเตอร์ OSPF จาก Edge-PC -> Cloud-SRV สำเร็จ',
           passed: pingSim.success,
           reason: pingSim.reason
         }
@@ -308,12 +308,12 @@ export class LabGraderService {
           reason: hasBoundAcl ? 'สร้างและผูก ACL กับพอร์ตเรียบร้อย' : 'สร้าง access-list 100 และใช้ ip access-group 100 in'
         },
         {
-          label: 'กฎ ACL บล็อก ICMP Ping จาก Staff-PC ➔ Web-SRV',
+          label: 'กฎ ACL บล็อก ICMP Ping จาก Staff-PC -> Web-SRV',
           passed: !pingSim.success && !!pingSim.aclBlocked,
           reason: pingSim.aclBlocked ? pingSim.reason : 'ICMP Ping ต้องถูกบล็อกโดยกฎ ACL'
         },
         {
-          label: 'กฎ ACL อนุญาตให้เปิดเว็บ HTTP (TCP Port 80) จาก Staff-PC ➔ Web-SRV สำเร็จ',
+          label: 'กฎ ACL อนุญาตให้เปิดเว็บ HTTP (TCP Port 80) จาก Staff-PC -> Web-SRV สำเร็จ',
           passed: httpSim.success,
           reason: httpSim.reason
         }
@@ -399,7 +399,7 @@ export class LabGraderService {
           reason: ospfOk ? 'OSPF Area 0 Neighbor FULL' : 'ตรวจสอบ OSPF บนเราเตอร์ทั้งสอง'
         },
         {
-          label: 'WAN & NAT: ส่ง HTTP ข้าม VLAN ➔ OSPF ➔ PAT Overload ไปยัง ISP-Server สำเร็จ',
+          label: 'WAN & NAT: ส่ง HTTP ข้าม VLAN -> OSPF -> PAT Overload ไปยัง ISP-Server สำเร็จ',
           passed: httpSim.success && !!httpSim.natTranslated && natOk,
           reason: httpSim.reason
         }

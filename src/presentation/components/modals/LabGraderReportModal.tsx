@@ -90,7 +90,7 @@ export const LabGraderReportModal: React.FC<LabGraderReportModalProps> = ({ onCl
               </span>
               <div className="text-2xl font-black font-mono">
                 {report.percent}% 
-                <span className="text-xs font-normal opacity-80 ml-2">
+                <span className="text-xs font-sans font-normal opacity-90 ml-2">
                   ({report.passedCount} จาก {report.checks.length} ข้อกำหนด)
                 </span>
               </div>
@@ -107,9 +107,9 @@ export const LabGraderReportModal: React.FC<LabGraderReportModalProps> = ({ onCl
 
           {/* Criteria Checklist */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono flex items-center justify-between">
+            <div className="text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between">
               <span>เกณฑ์การให้คะแนนแบบไดนามิก (Dynamic Verification):</span>
-              <span className="text-slate-500 font-normal">{report.checks.length} รายการ</span>
+              <span className="text-slate-400 font-normal">{report.checks.length} รายการ</span>
             </div>
 
             <div className="space-y-2">
@@ -129,10 +129,10 @@ export const LabGraderReportModal: React.FC<LabGraderReportModalProps> = ({ onCl
                       <AlertCircle size={16} className="text-rose-400" />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="text-xs font-semibold text-slate-200 flex items-center justify-between">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="text-xs sm:text-sm font-semibold text-slate-100 flex items-center justify-between gap-2">
                       <span>{idx + 1}. {check.label}</span>
-                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                      <span className={`text-[11px] font-mono px-2 py-0.5 rounded font-bold shrink-0 ${
                         check.passed 
                           ? 'bg-emerald-500/15 text-emerald-300' 
                           : 'bg-rose-500/15 text-rose-300'
@@ -141,7 +141,7 @@ export const LabGraderReportModal: React.FC<LabGraderReportModalProps> = ({ onCl
                       </span>
                     </div>
                     {check.reason && (
-                      <div className="text-[11px] font-mono text-slate-400 leading-relaxed bg-black/40 p-2 rounded-xl">
+                      <div className="text-xs font-sans text-slate-300 leading-relaxed bg-black/40 p-2.5 rounded-xl">
                         {check.reason}
                       </div>
                     )}

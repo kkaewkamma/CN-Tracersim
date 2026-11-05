@@ -3,8 +3,17 @@
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-cisco-dark text-slate-100 select-none overflow-hidden m-0 p-0 font-sans;
+  html, body {
+    @apply bg-cisco-dark text-slate-100 select-none overflow-hidden m-0 p-0 font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    line-height: 1.6;
+  }
+
+  /* Ensure Thai vowels & tone marks are never clipped in buttons, badges, or headings */
+  h1, h2, h3, h4, h5, h6, p, span, button, li, label, input, select, textarea {
+    line-height: 1.55;
   }
 }
 

@@ -16,8 +16,32 @@ export default {
         }
       },
       fontFamily: {
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
-        sans: ['Inter', 'Sarabun', 'sans-serif']
+        sans: [
+          'Inter',
+          '"Noto Sans Thai"',
+          '"IBM Plex Sans Thai"',
+          'Sarabun',
+          '"Leelawadee UI"',
+          '"Segoe UI"',
+          'Thonburi',
+          '"Sukhumvit Set"',
+          'Tahoma',
+          'sans-serif'
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          '"Fira Code"',
+          'Consolas',
+          '"SFMono-Regular"',
+          'Menlo',
+          'Monaco',
+          '"Leelawadee UI"',
+          '"Noto Sans Thai"',
+          'Sarabun',
+          'Thonburi',
+          'Tahoma',
+          'monospace'
+        ]
       }
     },
   },

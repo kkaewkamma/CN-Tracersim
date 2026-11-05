@@ -36,7 +36,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "OSI Layer 3",
     "color": "cyan",
     "presetLab": "static-route",
-    "theorySummary": "\n                <b>หน้าที่หลักของ Network Layer (OSI Layer 3):</b><br>\n                • <b>Addressing:</b> กำหนดที่อยู่แบบ Logical (IP Address) เพื่อระบุต้นทาง (Source IP) และปลายทาง (Destination IP)<br>\n                • <b>Encapsulation:</b> ห่อหุ้ม Transport Segment เป็น <b>IP Packet</b> พร้อมใส่หัวข้อมูลสำคัญ เช่น <b>TTL (Time-to-Live)</b> ซึ่งจะลดลงทีละ 1 ทุกครั้งที่ผ่าน Router เพื่อป้องกัน Routing Loop<br>\n                • <b>Routing:</b> เราเตอร์เลือกเส้นทางที่ดีที่สุดจากตาราง Routing Table เพื่อส่งแพ็กเก็ตข้ามเครือข่าย\n            ",
+    "theorySummary": "\n                หน้าที่หลักของ Network Layer (OSI Layer 3):\n                • Addressing: กำหนดที่อยู่แบบ Logical (IP Address) เพื่อระบุต้นทาง (Source IP) และปลายทาง (Destination IP)\n                • Encapsulation: ห่อหุ้ม Transport Segment เป็น IP Packet พร้อมใส่หัวข้อมูลสำคัญ เช่น TTL (Time-to-Live) ซึ่งจะลดลงทีละ 1 ทุกครั้งที่ผ่าน Router เพื่อป้องกัน Routing Loop\n                • Routing: เราเตอร์เลือกเส้นทางที่ดีที่สุดจากตาราง Routing Table เพื่อส่งแพ็กเก็ตข้ามเครือข่าย\n            ",
     "examTips": [
       "ค่า TTL (Time-to-Live) ลดลงทีละ 1 ทุกครั้งที่ผ่าน Router (Layer 3) แต่ไม่ลดเมื่อผ่าน Switch (Layer 2)",
       "Ping ใช้โปรโตคอล ICMP Echo Request (Type 8) และรับกลับด้วย ICMP Echo Reply (Type 0)",
@@ -67,7 +67,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
         "device": "HQ-PC",
         "cmd": "traceroute 192.168.30.100",
         "match": {},
-        "explain": "ใช้คำสั่ง traceroute เพื่อไล่ดู IP ของ Router ทีละ Hop (R1-HQ 192.168.10.1 ➔ R2-Branch 10.0.0.2 ➔ 192.168.30.100)"
+        "explain": "ใช้คำสั่ง traceroute เพื่อไล่ดู IP ของ Router ทีละ Hop (R1-HQ 192.168.10.1 -> R2-Branch 10.0.0.2 -> 192.168.30.100)"
       },
       {
         "device": "R1-HQ",
@@ -88,10 +88,10 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "number": "บทที่ 02",
     "topicEn": "Address Resolution",
     "title": "ARP & Neighbor Discovery",
-    "badge": "L2 ⟷ L3",
+    "badge": "L2 <-> L3",
     "color": "emerald",
     "presetLab": "lan",
-    "theorySummary": "\n                <b>Address Resolution Protocol (ARP):</b><br>\n                • เมื่อเครื่องต้นทางต้องการส่งข้อมูลไปหา IP ในวงแลนเดียวกัน แต่ยังไม่รู้ <b>MAC Address</b> ปลายทาง จะส่ง <b>ARP Request</b> แบบ <b>Broadcast (Dst MAC: FFFF.FFFF.FFFF)</b> ไปถามทุกเครื่องใน VLAN<br>\n                • เครื่องที่เป็นเจ้าของ IP นั้นจะตอบกลับด้วย <b>ARP Reply (Unicast)</b> พร้อมแจ้ง MAC Address ของตน แล้วบันทึกลงใน <b>ARP Table (ARP Cache)</b><br>\n                • หากปลายทางอยู่คนละวงแลน เครื่องจะทำ ARP ขอ MAC Address ของ <b>Default Gateway</b> แทน!\n            ",
+    "theorySummary": "\n                Address Resolution Protocol (ARP):\n                • เมื่อเครื่องต้นทางต้องการส่งข้อมูลไปหา IP ในวงแลนเดียวกัน แต่ยังไม่รู้ MAC Address ปลายทาง จะส่ง ARP Request แบบ Broadcast (Dst MAC: FFFF.FFFF.FFFF) ไปถามทุกเครื่องใน VLAN\n                • เครื่องที่เป็นเจ้าของ IP นั้นจะตอบกลับด้วย ARP Reply (Unicast) พร้อมแจ้ง MAC Address ของตน แล้วบันทึกลงใน ARP Table (ARP Cache)\n                • หากปลายทางอยู่คนละวงแลน เครื่องจะทำ ARP ขอ MAC Address ของ Default Gateway แทน!\n            ",
     "examTips": [
       "ARP Request ส่งแบบ Broadcast (FFFF.FFFF.FFFF) แต่ ARP Reply ตอบกลับแบบ Unicast",
       "ใน IPv6 จะไม่ใช้ ARP แต่ใช้ ICMPv6 Neighbor Discovery (NS / NA) แทน",
@@ -146,11 +146,11 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "OSI Layer 4",
     "color": "purple",
     "presetLab": "acl-nat",
-    "theorySummary": "\n                <b>Transport Layer (OSI Layer 4):</b><br>\n                • <b>TCP (Transmission Control Protocol):</b> เชื่อมต่อแบบ Connection-oriented เชื่อถือได้ ต้องทำ <b>3-Way Handshake (1. SYN ➔ 2. SYN-ACK ➔ 3. ACK)</b> ก่อนส่งข้อมูล เช่น <b>HTTP (Port 80), HTTPS (443), SSH (22)</b><br>\n                • <b>UDP (User Datagram Protocol):</b> แบบ Connectionless ส่งเร็วแต่ไม่ยืนยันการรับ เช่น <b>DNS (Port 53), DHCP (Port 67/68)</b>\n            ",
+    "theorySummary": "\n                Transport Layer (OSI Layer 4):\n                • TCP (Transmission Control Protocol): เชื่อมต่อแบบ Connection-oriented เชื่อถือได้ ต้องทำ 3-Way Handshake (1. SYN -> 2. SYN-ACK -> 3. ACK) ก่อนส่งข้อมูล เช่น HTTP (Port 80), HTTPS (443), SSH (22)\n                • UDP (User Datagram Protocol): แบบ Connectionless ส่งเร็วแต่ไม่ยืนยันการรับ เช่น DNS (Port 53), DHCP (Port 67/68)\n            ",
     "examTips": [
-      "TCP 3-Way Handshake มี 3 ขั้นตอน: SYN ➔ SYN-ACK ➔ ACK",
+      "TCP 3-Way Handshake มี 3 ขั้นตอน: SYN -> SYN-ACK -> ACK",
       "Well-Known Ports ที่ออกสอบบ่อย: FTP (20/21), SSH (22), Telnet (23), DNS (53), DHCP (67/68), HTTP (80), HTTPS (443)",
-      "สามารถกดปุ่ม \"🔍 OSI 7-Layer\" หลังส่ง HTTP เพื่อดู TCP Handshake แบบ Wireshark ได้ทันที"
+      "สามารถกดปุ่ม \"OSI 7-Layer\" หลังส่ง HTTP เพื่อดู TCP Handshake แบบ Wireshark ได้ทันที"
     ],
     "cheatSheet": [
       {
@@ -167,7 +167,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
         "device": "Corp-PC",
         "cmd": "http 203.0.113.8",
         "match": {},
-        "explain": "จำลองการเชื่อมต่อ TCP Port 80 (SYN ➔ SYN-ACK ➔ ACK) และส่งคำขอ HTTP GET ไปยัง ISP-Cloud (203.0.113.8)"
+        "explain": "จำลองการเชื่อมต่อ TCP Port 80 (SYN -> SYN-ACK -> ACK) และส่งคำขอ HTTP GET ไปยัง ISP-Cloud (203.0.113.8)"
       },
       {
         "device": "Corp-PC",
@@ -185,10 +185,10 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "Subnetting",
     "color": "amber",
     "presetLab": "troubleshoot",
-    "theorySummary": "\n                <b>การคำนวณ IPv4 Subnetting, CIDR และ VLSM:</b><br>\n                • <b>CIDR (/Prefix):</b> จำนวนบิตที่เป็นเลข 1 ใน Subnet Mask เช่น <code>/24</code> = <code>255.255.255.0</code> (เหลือบิตโฮสต์ $h = 32 - 24 = 8$ บิต)<br>\n                • <b>สูตรจำนวนเครื่อง (Usable Hosts):</b> $2^h - 2$ (หัก Network Address ใบแรก และ Broadcast Address ใบสุดท้ายออก)<br>\n                • <b>VLSM:</b> การนำ Subnet มาซอยย่อยตามขนาดที่ใช้งานจริง เช่น ลิงก์เชื่อมระหว่าง Router 2 ตัวใช้แค่ <code>/30</code> ($2^2 - 2 = 2$ โฮสต์) เพื่อประหยัด IP\n            ",
+    "theorySummary": "\n                การคำนวณ IPv4 Subnetting, CIDR และ VLSM:\n                • CIDR (/Prefix): จำนวนบิตที่เป็นเลข 1 ใน Subnet Mask เช่น /24 = 255.255.255.0 (เหลือบิตโฮสต์ h = 32 - 24 = 8 บิต)\n                • สูตรจำนวนเครื่อง (Usable Hosts): 2^h - 2 (หัก Network Address ใบแรก และ Broadcast Address ใบสุดท้ายออก)\n                • VLSM: การนำ Subnet มาซอยย่อยตามขนาดที่ใช้งานจริง เช่น ลิงก์เชื่อมระหว่าง Router 2 ตัวใช้แค่ /30 (2^2 - 2 = 2 โฮสต์) เพื่อประหยัด IP\n            ",
     "examTips": [
       "/24 = 254 เครื่อง | /25 = 126 เครื่อง | /26 = 62 เครื่อง | /27 = 30 เครื่อง | /28 = 14 เครื่อง | /30 = 2 เครื่อง",
-      "กดแท็บ \"🧮 เครื่องคิดเลข Subnet & VLSM\" ด้านบนเพื่อฝึกคำนวณโจทย์สอบได้ทันที!",
+      "กดแท็บ \"เครื่องคิดเลข Subnet & VLSM\" ด้านบนเพื่อฝึกคำนวณโจทย์สอบได้ทันที!",
       "ในแล็บนี้ Server1 ตั้ง IP ผิดวง (192.168.50.100) ต้องแก้ให้ตรงกับวง 192.168.20.0/24 ของ Router!"
     ],
     "cheatSheet": [
@@ -236,7 +236,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "128-bit IPv6",
     "color": "sky",
     "presetLab": "subnets",
-    "theorySummary": "\n                <b>โครงสร้าง IPv6 (128 บิต - เลขฐานสิบหก 8 กลุ่ม):</b><br>\n                • <b>กฎการย่อ IPv6:</b> (1) ตัดเลข 0 นำหน้าในแต่ละกลุ่มออกได้ เช่น <code>0db8</code> ➔ <code>db8</code> และ (2) ยุบกลุ่มที่เป็น 0 ติดกันเป็น <code>::</code> ได้ <b>เพียงครั้งเดียว</b> ใน 1 ที่อยู่<br>\n                • <b>ประเภทของ IPv6:</b> <b>Global Unicast</b> (<code>2000::/3</code> เช่น <code>2001:db8::/64</code>), <b>Link-Local</b> (<code>FE80::/10</code> ใช้คุยในลิงก์เดียวกัน), <b>Loopback</b> (<code>::1/128</code>)<br>\n                • <b>SLAAC:</b> เครื่องลูกข่ายสร้าง IPv6 64-bit อัตโนมัติจาก Router Advertisement (RA) โดยไม่ต้องพึ่ง DHCP Server!\n            ",
+    "theorySummary": "\n                โครงสร้าง IPv6 (128 บิต - เลขฐานสิบหก 8 กลุ่ม):\n                • กฎการย่อ IPv6: (1) ตัดเลข 0 นำหน้าในแต่ละกลุ่มออกได้ เช่น 0db8 -> db8 และ (2) ยุบกลุ่มที่เป็น 0 ติดกันเป็น :: ได้ เพียงครั้งเดียว ใน 1 ที่อยู่\n                • ประเภทของ IPv6: Global Unicast (2000::/3 เช่น 2001:db8::/64), Link-Local (FE80::/10 ใช้คุยในลิงก์เดียวกัน), Loopback (::1/128)\n                • SLAAC: เครื่องลูกข่ายสร้าง IPv6 64-bit อัตโนมัติจาก Router Advertisement (RA) โดยไม่ต้องพึ่ง DHCP Server!\n            ",
     "examTips": [
       "เครื่องหมาย :: ใช้ยุบศูนย์ต่อเนื่องได้แค่ 1 จุดเท่านั้น เพื่อไม่ให้ขนาดบิตกำกวม",
       "ต้องพิมพ์คำสั่ง \"ipv6 unicast-routing\" บน Router ก่อนเสมอ จึงจะทำหน้าที่ส่งต่อแพ็กเก็ต IPv6 และแจก SLAAC ได้",
@@ -307,7 +307,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "OSI Layer 2",
     "color": "indigo",
     "presetLab": "lan",
-    "theorySummary": "\n                <b>กระบวนการทำงานของ Layer 2 Switch (Switching Process):</b><br>\n                1. <b>Learning (เรียนรู้):</b> เมื่อเฟรมวิ่งเข้าพอร์ต สวิตช์จะอ่าน <b>Source MAC Address</b> แล้วจดบันทึกลงตาราง <b>CAM / MAC Address Table</b> ว่าอยู่พอร์ตใด<br>\n                2. <b>Flooding (กระจาย):</b> หากอ่าน <b>Destination MAC</b> แล้วไม่พบในตาราง (Unknown Unicast) หรือเป็น Broadcast (<code>FFFF.FFFF.FFFF</code>) สวิตช์จะส่งออกทุกพอร์ตใน VLAN เดียวกัน ยกเว้นพอร์ตที่รับเข้ามา<br>\n                3. <b>Forwarding (ส่งตรง):</b> หากพบ Destination MAC ในตารางแล้ว จะส่งออกไปเฉพาะพอร์ตปลายทางพอร์ตเดียวเท่านั้น\n            ",
+    "theorySummary": "\n                กระบวนการทำงานของ Layer 2 Switch (Switching Process):\n                1. Learning (เรียนรู้): เมื่อเฟรมวิ่งเข้าพอร์ต สวิตช์จะอ่าน Source MAC Address แล้วจดบันทึกลงตาราง CAM / MAC Address Table ว่าอยู่พอร์ตใด\n                2. Flooding (กระจาย): หากอ่าน Destination MAC แล้วไม่พบในตาราง (Unknown Unicast) หรือเป็น Broadcast (FFFF.FFFF.FFFF) สวิตช์จะส่งออกทุกพอร์ตใน VLAN เดียวกัน ยกเว้นพอร์ตที่รับเข้ามา\n                3. Forwarding (ส่งตรง): หากพบ Destination MAC ในตารางแล้ว จะส่งออกไปเฉพาะพอร์ตปลายทางพอร์ตเดียวเท่านั้น\n            ",
     "examTips": [
       "Switch เรียนรู้ตำแหน่งอุปกรณ์จาก Source MAC Address เสมอ แต่ตัดสินใจส่งออกโดยดูจาก Destination MAC Address",
       "Switch แยก Collision Domain ในทุกๆ พอร์ต แต่ทุกพอร์ตใน VLAN เดียวกันยังอยู่ใน Broadcast Domain เดียวกัน",
@@ -352,7 +352,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "IOS Security",
     "color": "teal",
     "presetLab": "lan",
-    "theorySummary": "\n                <b>การตั้งค่าพื้นฐานและความปลอดภัยของสวิตช์ (Basic Switch Configuration):</b><br>\n                • <b>Hostname & Passwords:</b> ตั้งชื่อด้วย <code>hostname</code>, ตั้งรหัสผ่านเข้าโหมด Privileged แบบเข้ารหัส MD5 ด้วย <code>enable secret</code> และเข้ารหัสรหัสผ่านทั้งหมดในไฟล์ Config ด้วย <code>service password-encryption</code><br>\n                • <b>SSH & VTY Lines:</b> ตั้งรหัสผ่านรีโมตเข้าอุปกรณ์ที่ <code>line vty 0 4</code> และบังคับใช้ SSH แทน Telnet ด้วย <code>transport input ssh</code><br>\n                • <b>Management VLAN (SVI):</b> สวิตช์ Layer 2 ไม่มีพอร์ตใส่ IP โดยตรง จึงต้องใส่ IP บนพอร์ตเสมือน <code>interface vlan 1</code> เพื่อให้รีโมตมาจัดการสวิตช์ได้\n            ",
+    "theorySummary": "\n                การตั้งค่าพื้นฐานและความปลอดภัยของสวิตช์ (Basic Switch Configuration):\n                • Hostname & Passwords: ตั้งชื่อด้วย hostname, ตั้งรหัสผ่านเข้าโหมด Privileged แบบเข้ารหัส MD5 ด้วย enable secret และเข้ารหัสรหัสผ่านทั้งหมดในไฟล์ Config ด้วย service password-encryption\n                • SSH & VTY Lines: ตั้งรหัสผ่านรีโมตเข้าอุปกรณ์ที่ line vty 0 4 และบังคับใช้ SSH แทน Telnet ด้วย transport input ssh\n                • Management VLAN (SVI): สวิตช์ Layer 2 ไม่มีพอร์ตใส่ IP โดยตรง จึงต้องใส่ IP บนพอร์ตเสมือน interface vlan 1 เพื่อให้รีโมตมาจัดการสวิตช์ได้\n            ",
     "examTips": [
       "enable secret จะปลอดภัยกว่า enable password เพราะเข้ารหัสแบบ Hash (Type 5/8/9) เสมอ",
       "หากต้องการให้ Switch รีโมตข้ามวงแลนได้ ต้องตั้งทั้ง interface vlan 1 (ip address + no shut) และ ip default-gateway!",
@@ -443,7 +443,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "802.1Q VLAN",
     "color": "purple",
     "presetLab": "roas-vlan",
-    "theorySummary": "\n                <b>Virtual LAN (VLAN) & 802.1Q Trunking:</b><br>\n                • <b>VLAN:</b> การแบ่งกลุ่มพอร์ตบน Switch แบบ Logical เพื่อแยก <b>Broadcast Domain</b> ออกจากกัน เช่น แผนก Sales (VLAN 10) และ Engineering (VLAN 20) แม้เสียบสวิตช์ตัวเดียวกันก็จะไม่เห็น Broadcast ของกันและกัน<br>\n                • <b>Access Port:</b> พอร์ตที่ต่อกับเครื่องปลายทาง (PC/Server) รับส่งเฟรมแบบไม่มีป้าย Tag (Untagged) ของ VLAN เดียว<br>\n                • <b>Trunk Port (IEEE 802.1Q):</b> ท่อรวมสัญญาณระหว่าง Switch กับ Switch หรือ Switch กับ Router โดยแปะป้าย <b>4-Byte VLAN Tag</b> ไปกับเฟรม ยกเว้นเฟรมของ <b>Native VLAN</b> ที่จะไม่ถูกติดป้าย Tag\n            ",
+    "theorySummary": "\n                Virtual LAN (VLAN) & 802.1Q Trunking:\n                • VLAN: การแบ่งกลุ่มพอร์ตบน Switch แบบ Logical เพื่อแยก Broadcast Domain ออกจากกัน เช่น แผนก Sales (VLAN 10) และ Engineering (VLAN 20) แม้เสียบสวิตช์ตัวเดียวกันก็จะไม่เห็น Broadcast ของกันและกัน\n                • Access Port: พอร์ตที่ต่อกับเครื่องปลายทาง (PC/Server) รับส่งเฟรมแบบไม่มีป้าย Tag (Untagged) ของ VLAN เดียว\n                • Trunk Port (IEEE 802.1Q): ท่อรวมสัญญาณระหว่าง Switch กับ Switch หรือ Switch กับ Router โดยแปะป้าย 4-Byte VLAN Tag ไปกับเฟรม ยกเว้นเฟรมของ Native VLAN ที่จะไม่ถูกติดป้าย Tag\n            ",
     "examTips": [
       "มาตรฐานการติดป้าย VLAN Tag บนสาย Trunk คือ IEEE 802.1Q (ขนาด Tag 4 Bytes แทรกใน Ethernet Header)",
       "Native VLAN (ค่าเริ่มต้นคือ VLAN 1) คือ VLAN ที่วิ่งผ่านสาย Trunk โดยไม่มีการติดป้าย 802.1Q Tag — เพื่อความปลอดภัยมักเปลี่ยนเป็น VLAN อื่น เช่น VLAN 99",
@@ -528,7 +528,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "Router CLI",
     "color": "cyan",
     "presetLab": "troubleshoot",
-    "theorySummary": "\n                <b>การตั้งค่าพอร์ตของ Router (Basic Router Configuration):</b><br>\n                • โดยค่าเริ่มต้น พอร์ตของ Cisco Router ทุกพอร์ตจะถูกปิดไว้ (<b>Administratively Down</b>) ต่างจาก Switch ที่เปิดพอร์ตให้อัตโนมัติ<br>\n                • การเปิดใช้งานพอร์ต Router ต้องทำ 3 ขั้นตอนเสมอ:<br>\n                  1. เลือกพอร์ต: <code>interface Gig0/1</code><br>\n                  2. กำหนด IP และ Mask: <code>ip address 192.168.20.1 255.255.255.0</code><br>\n                  3. สั่งเปิดพอร์ต: <code>no shutdown</code>\n            ",
+    "theorySummary": "\n                การตั้งค่าพอร์ตของ Router (Basic Router Configuration):\n                • โดยค่าเริ่มต้น พอร์ตของ Cisco Router ทุกพอร์ตจะถูกปิดไว้ (Administratively Down) ต่างจาก Switch ที่เปิดพอร์ตให้อัตโนมัติ\n                • การเปิดใช้งานพอร์ต Router ต้องทำ 3 ขั้นตอนเสมอ:\n                  1. เลือกพอร์ต: interface Gig0/1\n                  2. กำหนด IP และ Mask: ip address 192.168.20.1 255.255.255.0\n                  3. สั่งเปิดพอร์ต: no shutdown\n            ",
     "examTips": [
       "หาก show ip interface brief แล้วขึ้นว่า \"administratively down\" แปลว่าลืมพิมพ์คำสั่ง no shutdown!",
       "ขาของ Router ที่ต่อเข้ากับวงแลนใด จะทำหน้าที่เป็น Default Gateway ของเครื่อง PC ในวงแลนนั้นเสมอ"
@@ -592,11 +592,11 @@ export const NETACAD_LESSONS: CourseModule[] = [
     "badge": "L3 Routing",
     "color": "emerald",
     "presetLab": "ospf-core",
-    "theorySummary": "\n                <b>หลักการหาเส้นทางของ Router (Routing Concepts):</b><br>\n                • เราเตอร์จะรู้จักเฉพาะวงแลนที่เสียบสายติดกับตัวมันโดยตรง (<b>Connected Route - C</b>) เท่านั้น หากต้องการส่งไปวงแลนอื่นที่อยู่ถัดไป ต้องสอนเส้นทางด้วยวิธีใดวิธีหนึ่ง:<br>\n                1. <b>Static Route (AD = 1):</b> แอดมินพิมพ์บอกเส้นทางเองด้วย <code>ip route [วงปลายทาง] [Mask] [Next-Hop IP]</code><br>\n                2. <b>Default Route (Gateway of Last Resort):</b> <code>ip route 0.0.0.0 0.0.0.0 [Next-Hop]</code> ใช้ส่งออกอินเทอร์เน็ตเมื่อไม่ตรงกับวงใดเลย<br>\n                3. <b>Dynamic Routing - OSPF (AD = 110):</b> เราเตอร์แลกเปลี่ยนเส้นทางกันเองอัตโนมัติและคำนวณเส้นทางที่สั้นที่สุดด้วยอัลกอริทึม Dijkstra SPF\n            ",
+    "theorySummary": "\n                หลักการหาเส้นทางของ Router (Routing Concepts):\n                • เราเตอร์จะรู้จักเฉพาะวงแลนที่เสียบสายติดกับตัวมันโดยตรง (Connected Route - C) เท่านั้น หากต้องการส่งไปวงแลนอื่นที่อยู่ถัดไป ต้องสอนเส้นทางด้วยวิธีใดวิธีหนึ่ง:\n                1. Static Route (AD = 1): แอดมินพิมพ์บอกเส้นทางเองด้วย ip route [วงปลายทาง] [Mask] [Next-Hop IP]\n                2. Default Route (Gateway of Last Resort): ip route 0.0.0.0 0.0.0.0 [Next-Hop] ใช้ส่งออกอินเทอร์เน็ตเมื่อไม่ตรงกับวงใดเลย\n                3. Dynamic Routing - OSPF (AD = 110): เราเตอร์แลกเปลี่ยนเส้นทางกันเองอัตโนมัติและคำนวณเส้นทางที่สั้นที่สุดด้วยอัลกอริทึม Dijkstra SPF\n            ",
     "examTips": [
       "ค่า Administrative Distance (AD) ยิ่งน้อยยิ่งน่าเชื่อถือ: Connected = 0, Static = 1, EIGRP = 90, OSPF = 110, RIP = 120",
       "เมื่อมีหลายเส้นทางไปได้ เราเตอร์จะเลือกเส้นทางที่มี Prefix ยาวที่สุดก่อนเสมอ (Longest Prefix Match เช่น /26 ชนะ /24) ก่อนจะเปรียบเทียบค่า AD!",
-      "ต้องตั้งทั้งขาไป (R1 ➔ R2) และขากลับ (R2 ➔ R1) เสมอ แพ็กเก็ตจึงจะ Ping ไป-กลับสำเร็จ"
+      "ต้องตั้งทั้งขาไป (R1 -> R2) และขากลับ (R2 -> R1) เสมอ แพ็กเก็ตจึงจะ Ping ไป-กลับสำเร็จ"
     ],
     "cheatSheet": [
       {
@@ -643,13 +643,13 @@ export const NETACAD_LESSONS: CourseModule[] = [
   },
   {
     "id": "ch11-intervlan",
-    "number": "บทที่ 11 (5-Nov)",
+    "number": "บทที่ 11",
     "topicEn": "Inter-VLAN Routing",
     "title": "Router-on-a-Stick & Layer 3 Switch",
-    "badge": "5-Nov Topic",
+    "badge": "Inter-VLAN",
     "color": "purple",
     "presetLab": "roas-vlan",
-    "theorySummary": "\n                <b>การเชื่อมต่อข้าม VLAN (Inter-VLAN Routing) มี 2 สถาปัตยกรรมหลัก:</b><br>\n                1. <b>Router-on-a-Stick (ROAS):</b> ใช้สายแลน Trunk เส้นเดียวเชื่อมระหว่าง Switch กับ Router แล้วซอยพอร์ต Router ออกเป็นพอร์ตย่อย (<b>Sub-interfaces</b> เช่น <code>Gig0/0.10</code> และ <code>Gig0/0.20</code>) พร้อมติดคำสั่ง <code>encapsulation dot1Q [vlan-id]</code><br>\n                2. <b>Layer 3 Switch (Multilayer Switch SVI):</b> ประสิทธิภาพสูงกว่าในระดับองค์กร โดยเปิด <code>ip routing</code> บน Switch แล้วสร้างพอร์ตเสมือน <code>interface vlan 10</code> และ <code>interface vlan 20</code> เพื่อเป็น Gateway ในตัวสวิตช์เองเลย!\n            ",
+    "theorySummary": "\n                การเชื่อมต่อข้าม VLAN (Inter-VLAN Routing) มี 2 สถาปัตยกรรมหลัก:\n                1. Router-on-a-Stick (ROAS): ใช้สายแลน Trunk เส้นเดียวเชื่อมระหว่าง Switch กับ Router แล้วซอยพอร์ต Router ออกเป็นพอร์ตย่อย (Sub-interfaces เช่น Gig0/0.10 และ Gig0/0.20) พร้อมติดคำสั่ง encapsulation dot1Q [vlan-id]\n                2. Layer 3 Switch (Multilayer Switch SVI): ประสิทธิภาพสูงกว่าในระดับองค์กร โดยเปิด ip routing บน Switch แล้วสร้างพอร์ตเสมือน interface vlan 10 และ interface vlan 20 เพื่อเป็น Gateway ในตัวสวิตช์เองเลย!\n            ",
     "examTips": [
       "ใน Router-on-a-Stick ต้องสั่ง encapsulation dot1Q <vlan> ก่อนจึงจะใส่ ip address บน Sub-interface ได้ และอย่าลืมสั่ง no shutdown ที่พอร์ตแม่ (Gig0/0) ด้วย!",
       "ใน Layer 3 Switch ต้องพิมพ์คำสั่ง \"ip routing\" ในโหมด Global Config เพื่อเปิดความสามารถในการส่งแพ็กเก็ตข้าม SVI VLAN",
@@ -714,13 +714,13 @@ export const NETACAD_LESSONS: CourseModule[] = [
   },
   {
     "id": "ch12-acl",
-    "number": "บทที่ 12 (12-Nov)",
+    "number": "บทที่ 12",
     "topicEn": "Access Control Lists",
     "title": "Standard ACL & Extended ACL Firewall",
-    "badge": "12-Nov Topic",
+    "badge": "ACL Firewall",
     "color": "rose",
     "presetLab": "acl-nat",
-    "theorySummary": "\n                <b>Access Control Lists (ACL) - กฎไฟร์วอลล์คัดกรองแพ็กเก็ตบน Router:</b><br>\n                • <b>Standard ACL (หมายเลข 1–99):</b> กรองจาก <b>Source IP</b> อย่างเดียวเท่านั้น (ควรวางไว้ <b>ใกล้ปลายทาง</b> ที่สุด เพื่อไม่ให้บล็อกการจราจรไปที่อื่นโดยไม่ตั้งใจ)<br>\n                • <b>Extended ACL (หมายเลข 100–199):</b> กรองละเอียดทั้ง <b>Protocol (ICMP/TCP/UDP/IP), Source IP, Destination IP และเลข Port (เช่น eq 80)</b> (ควรวางไว้ <b>ใกล้ต้นทาง</b> ที่สุด เพื่อประหยัดแบนด์วิดท์)<br>\n                • เราเตอร์ประมวลผลกฎจาก <b>บนลงล่าง (Top-Down)</b> เมื่อเจอกฎที่ตรงจะหยุดเช็คทันที และบรรทัดสุดท้ายมี <b>Implicit Deny Any</b> ซ่อนอยู่เสมอ!\n            ",
+    "theorySummary": "\n                Access Control Lists (ACL) - กฎไฟร์วอลล์คัดกรองแพ็กเก็ตบน Router:\n                • Standard ACL (หมายเลข 1–99): กรองจาก Source IP อย่างเดียวเท่านั้น (ควรวางไว้ ใกล้ปลายทาง ที่สุด เพื่อไม่ให้บล็อกการจราจรไปที่อื่นโดยไม่ตั้งใจ)\n                • Extended ACL (หมายเลข 100–199): กรองละเอียดทั้ง Protocol (ICMP/TCP/UDP/IP), Source IP, Destination IP และเลข Port (เช่น eq 80) (ควรวางไว้ ใกล้ต้นทาง ที่สุด เพื่อประหยัดแบนด์วิดท์)\n                • เราเตอร์ประมวลผลกฎจาก บนลงล่าง (Top-Down) เมื่อเจอกฎที่ตรงจะหยุดเช็คทันที และบรรทัดสุดท้ายมี Implicit Deny Any ซ่อนอยู่เสมอ!\n            ",
     "examTips": [
       "จำแม่นๆ สำหรับสอบ: Standard ACL (1-99) วางใกล้ Destination | Extended ACL (100-199) วางใกล้ Source",
       "ท้าย ACL ทุกชุดจะมีกฎที่มองไม่เห็นคือ \"deny ip any any\" (Implicit Deny) ดังนั้นต้องมีบรรทัด permit อย่างน้อย 1 บรรทัดเสมอ!",
@@ -777,13 +777,13 @@ export const NETACAD_LESSONS: CourseModule[] = [
   },
   {
     "id": "ch13-nat",
-    "number": "บทที่ 13 (19-Nov)",
+    "number": "บทที่ 13",
     "topicEn": "Network Address Translation",
     "title": "Static NAT, Dynamic NAT & PAT Overload",
-    "badge": "19-Nov Topic",
+    "badge": "NAT & PAT",
     "color": "amber",
     "presetLab": "acl-nat",
-    "theorySummary": "\n                <b>Network Address Translation (NAT) - การแปลง Private IP เป็น Public IP:</b><br>\n                • <b>4 คำศัพท์สำคัญที่ออกสอบเสมอ:</b><br>\n                  - <b>Inside Local:</b> Private IP ของเครื่องในองค์กรก่อนแปลง (เช่น <code>192.168.10.25</code>)<br>\n                  - <b>Inside Global:</b> Public IP ขององค์กรหลังแปลงแล้ว เพื่อใช้ออกอินเทอร์เน็ต (เช่น <code>203.0.113.1</code>)<br>\n                  - <b>Outside Local / Outside Global:</b> Public IP ของเซิร์ฟเวอร์ปลายทางบนอินเทอร์เน็ต (เช่น <code>203.0.113.8</code>)<br>\n                • <b>Static NAT (1:1):</b> จับคู่ Private IP กับ Public IP ตายตัว เหมาะสำหรับเปิด Web Server ในองค์กรให้คนนอกเข้าถึง<br>\n                • <b>PAT (NAT Overload - Many:1):</b> เครื่องในองค์กรหลายร้อยเครื่องแชร์ Public IP เดียวกันโดยแยกแยะด้วย <b>หมายเลข Port</b>\n            ",
+    "theorySummary": "\n                Network Address Translation (NAT) - การแปลง Private IP เป็น Public IP:\n                • 4 คำศัพท์สำคัญที่ออกสอบเสมอ:\n                  - Inside Local: Private IP ของเครื่องในองค์กรก่อนแปลง (เช่น 192.168.10.25)\n                  - Inside Global: Public IP ขององค์กรหลังแปลงแล้ว เพื่อใช้ออกอินเทอร์เน็ต (เช่น 203.0.113.1)\n                  - Outside Local / Outside Global: Public IP ของเซิร์ฟเวอร์ปลายทางบนอินเทอร์เน็ต (เช่น 203.0.113.8)\n                • Static NAT (1:1): จับคู่ Private IP กับ Public IP ตายตัว เหมาะสำหรับเปิด Web Server ในองค์กรให้คนนอกเข้าถึง\n                • PAT (NAT Overload - Many:1): เครื่องในองค์กรหลายร้อยเครื่องแชร์ Public IP เดียวกันโดยแยกแยะด้วย หมายเลข Port\n            ",
     "examTips": [
       "จำคำศัพท์: Inside = ฝั่งองค์กรของเรา, Outside = ฝั่งอินเทอร์เน็ต | Local = มองเห็นจากข้างใน (Private IP), Global = มองเห็นจากโลกภายนอก (Public IP)",
       "ต้องกำหนดขา Router ฝั่ง LAN เป็น \"ip nat inside\" และขาฝั่ง WAN/ISP เป็น \"ip nat outside\" เสมอ",
@@ -808,7 +808,7 @@ export const NETACAD_LESSONS: CourseModule[] = [
       },
       {
         "cmd": "show ip nat translations",
-        "desc": "ดูตารางการแปลง IP (Inside Global ⟷ Inside Local)"
+        "desc": "ดูตารางการแปลง IP (Inside Global <-> Inside Local)"
       }
     ],
     "steps": [
@@ -840,13 +840,13 @@ export const NETACAD_LESSONS: CourseModule[] = [
   },
   {
     "id": "ch14-stp-etherchannel",
-    "number": "บทที่ 14 (SRWE)",
+    "number": "บทที่ 14",
     "topicEn": "STP & EtherChannel",
     "title": "Spanning Tree Protocol & Link Aggregation",
     "badge": "CCNA-SRWE M5-6",
     "color": "sky",
     "presetLab": "lab5",
-    "theorySummary": "\n                <b>Spanning Tree Protocol (IEEE 802.1D / Rapid PVST+) & EtherChannel:</b><br>\n                • <b>STP ป้องกัน Layer 2 Broadcast Storm:</b> เมื่อต่อสายสำรองระหว่าง Switch หลายเส้น STP จะเลือก <b>Root Bridge</b> (สวิตช์ที่มีค่า <b>Bridge Priority</b> ต่ำสุด ค่าเริ่มต้นคือ <code>32768</code>) และบล็อกพอร์ตสำรองไว้ในสถานะ <b>BLK (Alternate)</b><br>\n                • <b>PortFast & BPDU Guard:</b> ใช้คำสั่ง <code>spanning-tree portfast</code> บนพอร์ตที่ต่อ PC เพื่อให้พอร์ตขึ้นสถานะ Forwarding ทันที<br>\n                • <b>EtherChannel (IEEE 802.3ad LACP / Cisco PAgP):</b> รวมพอร์ตกายภาพหลายเส้นเป็นท่อเสมือน <code>Port-channel 1 (Po1)</code> ทำให้ได้แบนด์วิดท์เพิ่มขึ้นโดยที่ STP มองว่าเป็นลิงก์เดียว ไม่ถูกบล็อก!\n            ",
+    "theorySummary": "\n                Spanning Tree Protocol (IEEE 802.1D / Rapid PVST+) & EtherChannel:\n                • STP ป้องกัน Layer 2 Broadcast Storm: เมื่อต่อสายสำรองระหว่าง Switch หลายเส้น STP จะเลือก Root Bridge (สวิตช์ที่มีค่า Bridge Priority ต่ำสุด ค่าเริ่มต้นคือ 32768) และบล็อกพอร์ตสำรองไว้ในสถานะ BLK (Alternate)\n                • PortFast & BPDU Guard: ใช้คำสั่ง spanning-tree portfast บนพอร์ตที่ต่อ PC เพื่อให้พอร์ตขึ้นสถานะ Forwarding ทันที\n                • EtherChannel (IEEE 802.3ad LACP / Cisco PAgP): รวมพอร์ตกายภาพหลายเส้นเป็นท่อเสมือน Port-channel 1 (Po1) ทำให้ได้แบนด์วิดท์เพิ่มขึ้นโดยที่ STP มองว่าเป็นลิงก์เดียว ไม่ถูกบล็อก!\n            ",
     "examTips": [
       "สวิตช์ที่มี Bridge ID (Priority + MAC) ต่ำที่สุดจะชนะการเลือกตั้งเป็น Root Bridge เสมอ (ปรับด้วย spanning-tree vlan 1 root primary หรือ priority 4096)",
       "LACP ใช้โหมด active / passive ส่วน PAgP ของ Cisco ใช้โหมด desirable / auto (ถ้าทั้งสองฝั่งเป็น passive หรือ auto คู่กัน จะไม่สร้าง EtherChannel!)",
@@ -907,13 +907,13 @@ export const NETACAD_LESSONS: CourseModule[] = [
   },
   {
     "id": "ch15-port-security",
-    "number": "บทที่ 15 (Security)",
+    "number": "บทที่ 15",
     "topicEn": "Switch Port Security",
     "title": "Port Security, Sticky MAC & Err-Disabled",
     "badge": "CCNA-SRWE M11",
     "color": "rose",
     "presetLab": "lab1",
-    "theorySummary": "\n                <b>การป้องกันพอร์ตสวิตช์ระดับ Layer 2 (Switch Port Security):</b><br>\n                • ป้องกันการนำอุปกรณ์แปลกปลอม (Rogue Device) มาเสียบสายแลน หรือการโจมตีแบบ <b>MAC Flooding Attack</b> ที่ทำให้ตาราง CAM เต็ม<br>\n                • <b>Sticky MAC Learning:</b> คำสั่ง <code>switchport port-security mac-address sticky</code> สั่งให้สวิตช์จำ MAC Address ของเครื่องแรกที่ส่งเฟรมเข้ามาเป็นเจ้าของพอร์ตทันที<br>\n                • <b>3 โหมดการลงโทษเมื่อละเมิด (Violation Modes):</b><br>\n                  1. <b>Protect:</b> ทิ้งเฟรมแปลกปลอมเงียบๆ โดยไม่แจ้งเตือน<br>\n                  2. <b>Restrict:</b> ทิ้งเฟรมแปลกปลอม + ส่งแจ้งเตือน Syslog และเพิ่มตัวนับ Violation Counter<br>\n                  3. <b>Shutdown (ค่าเริ่มต้น):</b> ตัดพอร์ตเป็นสถานะ <b>err-disabled</b> ทันที! แอดมินต้องกู้คืนด้วยการสั่ง <code>shutdown</code> แล้วตามด้วย <code>no shutdown</code>\n            ",
+    "theorySummary": "\n                การป้องกันพอร์ตสวิตช์ระดับ Layer 2 (Switch Port Security):\n                • ป้องกันการนำอุปกรณ์แปลกปลอม (Rogue Device) มาเสียบสายแลน หรือการโจมตีแบบ MAC Flooding Attack ที่ทำให้ตาราง CAM เต็ม\n                • Sticky MAC Learning: คำสั่ง switchport port-security mac-address sticky สั่งให้สวิตช์จำ MAC Address ของเครื่องแรกที่ส่งเฟรมเข้ามาเป็นเจ้าของพอร์ตทันที\n                • 3 โหมดการลงโทษเมื่อละเมิด (Violation Modes):\n                  1. Protect: ทิ้งเฟรมแปลกปลอมเงียบๆ โดยไม่แจ้งเตือน\n                  2. Restrict: ทิ้งเฟรมแปลกปลอม + ส่งแจ้งเตือน Syslog และเพิ่มตัวนับ Violation Counter\n                  3. Shutdown (ค่าเริ่มต้น): ตัดพอร์ตเป็นสถานะ err-disabled ทันที! แอดมินต้องกู้คืนด้วยการสั่ง shutdown แล้วตามด้วย no shutdown\n            ",
     "examTips": [
       "ต้องตั้งพอร์ตเป็นโหมด Access (switchport mode access) ก่อนเสมอ จึงจะเปิดคำสั่ง switchport port-security ได้!",
       "โหมด Violation เริ่มต้นของ Cisco IOS คือ Shutdown (พอร์ตจะดับเป็นสถานะ err-disabled ทันทีที่มี MAC เกินกำหนด)",
@@ -1009,7 +1009,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
     ],
     "scenario": "คุณเพิ่งติดตั้งสวิตช์ตัวใหม่ในห้องปฏิบัติการ ต้องตั้งค่าความปลอดภัยพื้นฐาน กำหนด Management IP 192.168.1.2/24 บน VLAN 1 และยืนยันว่าเครื่องลูกข่ายทั้งหมดสื่อสารกับ File-SRV ได้",
     "procedure": [
-      "เปิดหน้าต่าง CLI ของ SW1-Access แล้วเข้าสู่โหมด Global Configuration (enable ➔ configure terminal)",
+      "เปิดหน้าต่าง CLI ของ SW1-Access แล้วเข้าสู่โหมด Global Configuration (enable -> configure terminal)",
       "ตั้งรหัสผ่าน Privileged EXEC ด้วยคำสั่ง enable secret class และเข้ารหัสรหัสผ่านด้วย service password-encryption",
       "เข้าสู่พอร์ตเสมือน interface vlan 1 แล้วกำหนด IP 192.168.1.2 255.255.255.0 พร้อมสั่ง no shutdown",
       "เปิด CLI ของ PC1 แล้วทดสอบส่ง Ping ไปยัง File-SRV (192.168.1.100) จากนั้นตรวจสอบตาราง MAC บนสวิตช์"
@@ -1202,7 +1202,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
       "ตั้งค่า Static Route (ip route) ทั้งขาไป (Forward Path) และขากลับ (Return Path)",
       "ตรวจสอบตาราง Routing Table (show ip route) และไล่เส้นทางด้วย traceroute"
     ],
-    "topologyDesc": "HQ-PC (192.168.10.10/24) ➔ R1-HQ (10.0.0.1/30) ⟷ R2-Branch (10.0.0.2/30) ➔ Branch-SRV (192.168.30.100/24)",
+    "topologyDesc": "HQ-PC (192.168.10.10/24) -> R1-HQ (10.0.0.1/30) <-> R2-Branch (10.0.0.2/30) -> Branch-SRV (192.168.30.100/24)",
     "devices": [
       "R1-HQ (HQ Router)",
       "R2-Branch (Branch Router)",
@@ -1328,7 +1328,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
     "objectives": [
       "เข้าใจหลักการทำงานของ Router-on-a-Stick (ROAS) ที่ใช้สาย Trunk เส้นเดียวรับส่งหลาย VLAN",
       "สร้างและตั้งค่า Sub-interface (Gig0/0.10 และ Gig0/0.20) พร้อมระบุ encapsulation dot1Q <vlan-id>",
-      "ตรวจสอบการส่งแพ็กเก็ตข้าม VLAN (VLAN 10 ⟷ R1-ROAS ⟷ VLAN 20)"
+      "ตรวจสอบการส่งแพ็กเก็ตข้าม VLAN (VLAN 10 <-> R1-ROAS <-> VLAN 20)"
     ],
     "topologyDesc": "Sales-VLAN10 (192.168.10.10/24) และ Eng-VLAN20 (192.168.20.10/24) ต่อเข้ากับ SW1-Trunk ซึ่งเชื่อมสาย Trunk (Fa0/1) ไปยัง R1-ROAS ขา Gig0/0 (Gig0/0.10 และ Gig0/0.20)",
     "devices": [
@@ -1472,7 +1472,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
       "เปิดโปรโตคอล router ospf 1 และประกาศเครือข่ายด้วยคำสั่ง network <ip> <wildcard> area 0",
       "ตรวจสอบตารางเพื่อนบ้าน (show ip ospf neighbor) และเส้นทางรหัส O [110/cost] ใน show ip route"
     ],
-    "topologyDesc": "Branch-PC (192.168.100.10/24) ➔ R1-Edge (10.10.10.1/30) ⟷ R2-Core (10.10.10.2/30) ➔ Cloud-DB (172.16.1.100/24)",
+    "topologyDesc": "Branch-PC (192.168.100.10/24) -> R1-Edge (10.10.10.1/30) <-> R2-Core (10.10.10.2/30) -> Cloud-DB (172.16.1.100/24)",
     "devices": [
       "R1-Edge & R2-Core (OSPF Routers)",
       "SW-Edge & SW-Core (Switches)",
@@ -1607,7 +1607,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
       "ตั้งค่าพอร์ต ip nat inside / ip nat outside และคำสั่ง PAT Overload (ip nat inside source list 1 interface Gig0/1 overload)",
       "ทดสอบการแปลง Private IP เป็น Public IP พร้อมตรวจสอบตาราง show ip nat translations"
     ],
-    "topologyDesc": "Corp-PC (192.168.10.25/24) ➔ SW1-Corp ➔ R1-Firewall (Gig0/0 Inside: 192.168.10.1/24 | Gig0/1 Outside: 203.0.113.1/29) ➔ ISP-Cloud (203.0.113.8/29)",
+    "topologyDesc": "Corp-PC (192.168.10.25/24) -> SW1-Corp -> R1-Firewall (Gig0/0 Inside: 192.168.10.1/24 | Gig0/1 Outside: 203.0.113.1/29) -> ISP-Cloud (203.0.113.8/29)",
     "devices": [
       "R1-Firewall (NAT/Firewall Router)",
       "SW1-Corp (Switch)",
@@ -1667,11 +1667,11 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
     "presetId": "lab11",
     "linkedLessonId": "ch09-router-basic",
     "objectives": [
-      "ประยุกต์ใช้กระบวนการวิเคราะห์ปัญหาเครือข่ายตามลำดับชั้น OSI (Physical/Data Link ➔ Network/IP ➔ Routing)",
+      "ประยุกต์ใช้กระบวนการวิเคราะห์ปัญหาเครือข่ายตามลำดับชั้น OSI (Physical/Data Link -> Network/IP -> Routing)",
       "ค้นหาและซ่อมแซมจุดเสีย 3 จุดในเครือข่ายที่ล่ม (พอร์ต Shutdown, Default Gateway ผิด, IP Server คนละวงแลน)",
       "ยืนยันผลการซ่อมแซมจน Auto-Grader ขึ้นคะแนนเต็ม 100%"
     ],
-    "topologyDesc": "Admin-PC (192.168.10.10/24) ➔ SW1 ➔ R1-Gateway (Gig0/0 .10.1 | Gig0/1 .20.1) ➔ SW2 ➔ Payroll-SRV (ต้องอยู่ในวง .20.0/24)",
+    "topologyDesc": "Admin-PC (192.168.10.10/24) -> SW1 -> R1-Gateway (Gig0/0 .10.1 | Gig0/1 .20.1) -> SW2 -> Payroll-SRV (ต้องอยู่ในวง .20.0/24)",
     "devices": [
       "R1-Gateway (Router)",
       "SW1 & SW2 (Switches)",
@@ -1704,7 +1704,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
       "ซ่อมจุดที่ 3: แก้ IP ของ Payroll-SRV ให้กลับมาอยู่ในวง 192.168.20.0/24 (25%)",
       "Admin-PC สามารถส่ง Ping ไปยัง Payroll-SRV สำเร็จครบสมบูรณ์ (25%)"
     ],
-    "hintsAndSolution": "คำใบ้: กดปุ่ม \"⚡ รันเฉลยอัตโนมัติ (Auto-Demo)\" ด้านล่างเพื่อดูสคริปต์ซ่อมทั้ง 3 จุดทีละขั้นตอน หรือเปิด CLI ของแต่ละอุปกรณ์เพื่อพิมพ์ตามรายการ Required Commands",
+    "hintsAndSolution": "คำใบ้: กดปุ่ม \"รันเฉลยอัตโนมัติ (Auto-Demo)\" ด้านล่างเพื่อดูสคริปต์ซ่อมทั้ง 3 จุดทีละขั้นตอน หรือเปิด CLI ของแต่ละอุปกรณ์เพื่อพิมพ์ตามรายการ Required Commands",
     "autoDemoCommands": [
       {
         "device": "R1-Gateway",
@@ -1750,7 +1750,7 @@ export const PRACTICAL_LABS_CATALOG: PracticalLab[] = [
       "เปิดใช้งาน Switch Port Security บน SW1-HQ ขา Fa0/2 เพื่อล็อกเครื่อง HQ-PC1",
       "ตั้งค่า OSPF Area 0 บน R1-HQ และเปิดใช้งาน PAT Overload บน R2-Edge เพื่อให้ออกสู่ ISP-DNS (203.0.113.8) ได้ครบวงจร"
     ],
-    "topologyDesc": "HQ-PC1 (192.168.10.10/24) ➔ SW1-HQ ➔ R1-HQ (10.0.0.1/30) ⟷ R2-Edge (10.0.0.2/30 | WAN 203.0.113.1/29) ➔ ISP-DNS (203.0.113.8/29)",
+    "topologyDesc": "HQ-PC1 (192.168.10.10/24) -> SW1-HQ -> R1-HQ (10.0.0.1/30) <-> R2-Edge (10.0.0.2/30 | WAN 203.0.113.1/29) -> ISP-DNS (203.0.113.8/29)",
     "devices": [
       "SW1-HQ (Access Switch)",
       "R1-HQ (Core OSPF Router)",

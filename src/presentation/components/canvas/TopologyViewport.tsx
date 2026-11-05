@@ -351,19 +351,19 @@ export const TopologyViewport: React.FC = () => {
                   <div
                     key={idx}
                     onClick={() => setActiveHopIndex(idx)}
-                    className={`p-2 rounded-xl border text-[11px] font-mono space-y-0.5 cursor-pointer transition ${
+                    className={`p-2.5 rounded-xl border text-xs font-sans space-y-1 cursor-pointer transition ${
                       isCurrentActive
                         ? 'bg-cyan-500/15 border-cyan-500/50 text-cyan-200'
                         : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-slate-300 font-bold">
-                      <span>{idx + 1}. {hop.device}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300">
+                    <div className="flex items-center justify-between text-slate-200 font-bold">
+                      <span className="font-mono">{idx + 1}. {hop.device}</span>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-300">
                         {hop.layer} • {hop.action.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-slate-400 text-[10px] leading-relaxed">
+                    <div className="text-slate-300 text-xs leading-relaxed">
                       {hop.details}
                     </div>
                   </div>

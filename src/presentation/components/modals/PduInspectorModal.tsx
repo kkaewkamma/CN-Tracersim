@@ -58,7 +58,7 @@ export const PduInspectorModal: React.FC<PduInspectorModalProps> = ({ onClose })
                   {lastSimulationResult.success ? 'TRANSMISSION SUCCESS' : 'PACKET DROPPED'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-mono">
+              <p className="text-xs text-slate-300 font-sans">
                 {lastSimulationResult.reason}
               </p>
             </div>
@@ -76,9 +76,9 @@ export const PduInspectorModal: React.FC<PduInspectorModalProps> = ({ onClose })
           
           {/* Left: Hop Sequence Navigator */}
           <div className="w-full md:w-72 bg-slate-950/70 border-b md:border-b-0 md:border-r border-slate-800 p-3 overflow-y-auto space-y-1.5 shrink-0">
-            <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold px-2 py-1 flex items-center justify-between">
-              <span>Telemetry Hops</span>
-              <span className="text-cyan-400">{hops.length} ขั้น</span>
+            <div className="text-xs uppercase tracking-wider text-slate-400 font-bold px-2 py-1 flex items-center justify-between">
+              <span className="font-mono">Telemetry Hops</span>
+              <span className="text-cyan-400 font-sans">{hops.length} ขั้น</span>
             </div>
 
             {hops.map((h, idx) => {
@@ -103,7 +103,7 @@ export const PduInspectorModal: React.FC<PduInspectorModalProps> = ({ onClose })
                     <div className="truncate">
                       <div className="text-xs font-bold truncate">{h.device}</div>
                       <div className="text-[10px] font-mono text-slate-400">
-                        {h.ingressPort ? `${h.ingressPort} ➔ ` : ''}{h.egressPort || h.layer}
+                        {h.ingressPort ? `${h.ingressPort} -> ` : ''}{h.egressPort || h.layer}
                       </div>
                     </div>
                   </div>
@@ -150,8 +150,8 @@ export const PduInspectorModal: React.FC<PduInspectorModalProps> = ({ onClose })
             </div>
 
             {/* Hop Narrative */}
-            <div className="p-3.5 rounded-2xl bg-black/60 border border-slate-800 font-mono text-xs text-slate-300 space-y-1">
-              <div className="text-[10px] uppercase text-slate-500 font-bold">Event Details:</div>
+            <div className="p-3.5 rounded-2xl bg-black/60 border border-slate-800 font-sans text-xs sm:text-sm text-slate-200 space-y-1">
+              <div className="text-[11px] font-mono uppercase text-slate-400 font-bold">Event Details:</div>
               <p className="leading-relaxed text-cyan-300">{currentHop.details}</p>
             </div>
 

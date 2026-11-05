@@ -64,25 +64,25 @@ export const SubnetCalculatorModal: React.FC<SubnetCalcProps> = ({ onClose }) =>
         {/* Results Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="text-[11px] text-slate-400">Network Address (ชื่อวงแลน)</div>
+            <div className="text-xs text-slate-300 font-sans">Network Address (ชื่อวงแลน)</div>
             <div className="text-base font-mono font-bold text-cyan-300 mt-0.5">{details.networkAddress}/{details.cidr}</div>
-            <div className="text-[10px] font-mono text-slate-500 mt-1">IP ใบแรกสุด (ห้ามตั้งให้ Host)</div>
+            <div className="text-xs font-sans text-slate-400 mt-1">IP ใบแรกสุด (ห้ามตั้งให้ Host)</div>
           </div>
           <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="text-[11px] text-slate-400">Usable Host IP Range</div>
+            <div className="text-xs text-slate-300 font-sans">Usable Host IP Range</div>
             <div className="text-xs font-mono font-bold text-emerald-400 mt-1 flex items-center gap-1">
               <span>{details.firstHost}</span>
               <ArrowRight size={12} className="text-slate-500" />
               <span>{details.lastHost}</span>
             </div>
-            <div className="text-[10px] font-mono text-slate-400 mt-1">
-              จำนวนเครื่อง: <b className="text-white">{details.usableHosts.toLocaleString()}</b> (2^{details.hostBits} - 2)
+            <div className="text-xs font-sans text-slate-300 mt-1">
+              จำนวนเครื่อง: <strong className="text-white font-mono">{details.usableHosts.toLocaleString()}</strong> <span className="font-mono text-slate-400">(2^{details.hostBits} - 2)</span>
             </div>
           </div>
           <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="text-[11px] text-slate-400">Broadcast Address</div>
+            <div className="text-xs text-slate-300 font-sans">Broadcast Address</div>
             <div className="text-base font-mono font-bold text-amber-300 mt-0.5">{details.broadcastAddress}</div>
-            <div className="text-[10px] font-mono text-slate-500 mt-1">IP ใบสุดท้ายของ Subnet</div>
+            <div className="text-xs font-sans text-slate-400 mt-1">IP ใบสุดท้ายของ Subnet</div>
           </div>
         </div>
 

@@ -101,7 +101,7 @@ export const NetworkEventLogsModal: React.FC<EventLogsModalProps> = ({ onClose }
         </div>
 
         {/* Logs List */}
-        <div className="flex-1 p-5 overflow-y-auto bg-[#080d14] space-y-2 font-mono text-xs">
+        <div className="flex-1 p-5 overflow-y-auto bg-[#080d14] space-y-2 font-sans text-xs">
           {filteredLogs.length === 0 ? (
             <div className="text-center py-16 text-slate-500 italic">
               ไม่มีประวัติเหตุการณ์ที่ตรงกับตัวกรอง
@@ -110,7 +110,7 @@ export const NetworkEventLogsModal: React.FC<EventLogsModalProps> = ({ onClose }
             filteredLogs.map((l) => (
               <div
                 key={l.id}
-                className={`p-3 rounded-2xl border transition flex items-start gap-3 ${
+                className={`p-3.5 rounded-2xl border transition flex items-start gap-3 ${
                   l.status === 'ok'
                     ? 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
                     : l.status === 'fail'
@@ -121,17 +121,17 @@ export const NetworkEventLogsModal: React.FC<EventLogsModalProps> = ({ onClose }
                 }`}
               >
                 <div className="mt-0.5">{getStatusIcon(l.status)}</div>
-                <div className="min-w-0 flex-1 space-y-0.5">
-                  <div className="flex items-center justify-between text-slate-400 text-[10px]">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between text-slate-400 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-xs">{l.title}</span>
-                      <span className="px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 uppercase">
+                      <span className="font-bold text-white text-xs sm:text-sm">{l.title}</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-cyan-300 font-mono text-[11px] uppercase">
                         {l.type}
                       </span>
                     </div>
-                    <span>{l.timestamp}</span>
+                    <span className="font-mono text-[11px]">{l.timestamp}</span>
                   </div>
-                  <div className="text-slate-300 text-[11px] leading-relaxed">
+                  <div className="text-slate-200 text-xs leading-relaxed">
                     {l.details}
                   </div>
                 </div>

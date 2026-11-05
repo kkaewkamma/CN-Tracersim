@@ -630,7 +630,7 @@ export const DeviceConfigModal: React.FC<DeviceConfigModalProps> = ({ device, on
                         {(acl.rules || []).map((r: any, rIdx: number) => (
                           <div key={rIdx} className="flex items-center justify-between pl-2 border-l border-slate-800">
                             <span>
-                              {r.action.toUpperCase()} {r.protocol.toUpperCase()} {r.src} {r.srcWildcard} ➔ {r.dst} {r.dstWildcard} {r.dstPort ? `eq ${r.dstPort}` : ''}
+                              {r.action.toUpperCase()} {r.protocol.toUpperCase()} {r.src} {r.srcWildcard} {'->'} {r.dst} {r.dstWildcard} {r.dstPort ? `eq ${r.dstPort}` : ''}
                             </span>
                             <button
                               type="button"

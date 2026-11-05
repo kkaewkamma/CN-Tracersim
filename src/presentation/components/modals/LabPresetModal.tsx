@@ -72,18 +72,18 @@ export const LabPresetModal: React.FC<LabPresetModalProps> = ({ onClose }) => {
                       )}
                     </div>
 
-                    <h4 className="font-bold text-sm text-white">{lab.title}</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                    <h4 className="font-bold text-sm sm:text-base text-white">{lab.title}</h4>
+                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
                       {lab.scenario}
                     </p>
 
-                    <div className="text-[11px] font-mono text-slate-500 bg-black/40 p-2 rounded-xl truncate">
+                    <div className="text-xs font-sans text-slate-300 bg-black/40 p-2.5 rounded-xl truncate">
                       {lab.topologyDesc}
                     </div>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-xs text-slate-300 font-sans">
                       {lab.graderCriteria.length} เกณฑ์ตรวจคะแนน
                     </span>
 
